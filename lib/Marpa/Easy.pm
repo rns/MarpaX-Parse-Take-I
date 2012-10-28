@@ -17,6 +17,8 @@ use Data::TreeDumper;
 
 use Marpa::Easy::BNF;
 
+use Math::Combinatorics;
+
 use Encode qw{ encode is_utf8 };
 
 use XML::Twig;
@@ -163,7 +165,8 @@ sub add_rules {
     
     my $grammar = $self->grammar;
     my $rules = $self->rules;
-
+    
+    # !!! rules will be hash refs after Marpa processing; delete 'check_symbols' from each of them
     # make a new Marpa::Easy with $rules_to_add
     # get rules from there 
     # append them to our $rules
@@ -212,6 +215,9 @@ sub _bnf_to_rules
     For each symbol ending with ?, add a new rule without such symbol
     and remove ? from the synmbol's end.
     
+    TODO:
+        handle several quantified symbols in in one rules, e.g. article? adjective? noun
+    
 =cut
 sub _quantifiers_to_rules
 {   
@@ -221,9 +227,18 @@ sub _quantifiers_to_rules
     
 #    say "# rules ", Dump $rules;
     
+    # symbols quantified with * or ? require adding rules without such symbols
     my $quantified_symbol_rules = [];
-    my $sequence_lhs = {}; # to prevent sequence's lhs duplication
-    for my $rule (@$rules){
+    # more than one symbol per rules can be  * or ? quantified
+    # {quantified_rule_index}->{nullable_symbol_index}
+    my $nullable_symbol_indices = {};
+    
+    # prevent sequence's lhs duplication
+    my $sequence_lhs = {}; 
+    
+    # process rules
+    for my $j (0..@$rules-1){
+        my $rule = $rules->[$j];
 #        say "# rule ", Dump $rule;
         # get lhs and rhs
         my ($lhs, $rhs);
@@ -240,7 +255,7 @@ sub _quantifiers_to_rules
         # check symbols ending with quantifiers
         for my $i (0..@$rhs-1){
             my $symbol = $rhs->[$i];
-            # TODO" better checking for regexes (\d+)
+            # TODO: better checking for regexes (\d+)
             if ($symbol =~ m/(\?|\*|\+)$/ and $symbol !~ m{\\}){
                 my $quantifier = $1;
 #                say "$quantifier, $rhs->[$i]";
@@ -252,6 +267,10 @@ sub _quantifiers_to_rules
                 given ($quantifier){
                     when ("?"){
 #                        say "# zero or one ", Dump $rule;
+                        # set rule's nullable symbol indices
+                        $nullable_symbol_indices->{$j}->{$i} = undef;
+
+=pod this is done with $nullable_symbol_indices below
                         # add rule without the quantified symbol
                         my @non_quantified_rhs = grep { $symbol ne $_ } @$rhs;
 #                        say "# non_quantified_rhs ", Dump \@non_quantified_rhs;
@@ -267,11 +286,14 @@ sub _quantifiers_to_rules
                                 push @$quantified_symbol_rules, \@non_quantified_rule;
                             }
                         }
+=cut
+
                         # replace quantified symbol to non-quantified in the rule
                         $rhs->[$i] = $non_quantified_symbol;
                     }
                     # add min => 0 or min => 1 sequence 
                     when ([qw(* +)]){
+                        
                         # sequence lhs must be unique
 =pod                            
 
@@ -306,40 +328,93 @@ action  => sub { push @{ $_[2] }, $_[1]; $_[2] }
                                 };
                             }
                             else{
+#                                say "sequences as sequence rules";
                                 push @$quantified_symbol_rules, { 
                                     lhs => $symbol,
                                     rhs => [ $non_quantified_symbol ],
                                     min => $quantifier eq '+' ? 1 : 0,
-                                    action => sub { 
+#                                    action => sub { 
                                         # strip per-parse variable
-                                        shift;
+#                                        shift;
     #                                    say Dump \@_;
     #                                    say defined @_;
     #                                    say join '', @_;
                                         # return empty array ref rather than undef for null (zero-item) sequences
-                                        \@_;
-                                    },
+#                                        \@_;
+#                                    },
                                 };
                             }
                             $sequence_lhs->{$symbol} = undef;
                         }
                         # add rule with deleted $symbol* deleted
-                        if ($self->{quantifier_rules} eq 'recursive' and $quantifier eq '*'){
-#                            say "adding rule with deleted $symbol deleted";
+                        if ($quantifier eq '*'){
+                            # set rule's nullable symbol indices
+                            $nullable_symbol_indices->{$j}->{$i} = undef;
+
+=pod this is done with $nullable_symbol_indices below
+                            if ($self->{quantifier_rules} eq 'recursive'){
+#                            say "adding rule with $symbol deleted";
 #                            say "removing $symbol";
-                            push @$quantified_symbol_rules, { 
-                                lhs     => $lhs,
-                                rhs     => [ grep { $_ ne $symbol } @$rhs ],
+                                push @$quantified_symbol_rules, { 
+                                    lhs     => $lhs,
+                                    rhs     => [ grep { $_ ne $symbol } @$rhs ],
+                                }
                             }
+=cut                            
+
                         }
                     }
                 }
             }
         }
     }
+
+    # add rules with nullable symbols
+    my @rules_with_nullables;
+    for my $j (keys %$nullable_symbol_indices){
+        my $rule = $rules->[$j];
+
+        my ($lhs, $rhs);
+        given (ref $rule){
+            when ("HASH"){
+                $lhs = $rule->{lhs};
+                $rhs = $rule->{rhs};
+            }
+            when ("ARRAY"){
+                ($lhs, $rhs) = @$rule;
+            }
+        }
+
+        my @nullables = sort keys %{ $nullable_symbol_indices->{$j} };
+        # generate the indices of symbols to null
+#        say "$lhs -> @$rhs\nnullables:@nullables";
+        my @symbols_to_null;
+        for my $k (1..@nullables){
+            my @combinations = combine($k, @nullables);
+            push @symbols_to_null, \@combinations;
+#            say "$k:", join ' | ', map { join ' ', @$_ } @combinations;
+        }
+        # generate nullables rhs by deleting nullable symbols according to generated indices
+        for my $combinations (@symbols_to_null){
+            # delete (null) nullable symbols
+            for my $combination (@$combinations){
+#                say "@$combination";
+                my @nullable_rhs = @$rhs;
+                for my $index (@$combination){
+                    $nullable_rhs[$index] = undef;
+                }
+                @nullable_rhs = grep {defined} @nullable_rhs;
+#                say "$lhs -> @nullable_rhs";
+                push @rules_with_nullables, { lhs => $lhs, rhs => \@nullable_rhs };
+            }
+        }
+    }
+#    say Dump \@rules_with_nullables;
 #    say Dump $quantified_symbol_rules;
     
     push @$rules, @$quantified_symbol_rules;
+    push @$rules, @rules_with_nullables;
+    
 }
 
 sub _extract_start_symbol
@@ -602,11 +677,15 @@ sub HoH {
             if (ref $child eq "HASH"){
 #                say "# child of $lhs (HASH):\n", Dump $child;
                 for my $key (keys %$child){
-                    # issue warning when destination key already exists
+                    # replace duplicate key to array ref
                     if (exists $result->{$lhs}->{$key}){
-                        say "This value of {", $lhs, '}->{', $key, "} key:\n", Dump($result->{$lhs}->{$key}), "will be replaced with:\n", Dump($child->{$key});
+                        $result->{$lhs}->{$key} = [ values %{ $result->{$lhs} } ] 
+                            unless ref $result->{$lhs}->{$key} eq "ARRAY";
+                        push @{ $result->{$lhs}->{$key} }, values %{ $child };
                     }
-                    $result->{$lhs}->{$key} = $child->{$key};
+                    else{
+                        $result->{$lhs}->{$key} = $child->{$key};
+                    }
                 }
             }
             elsif (ref $child eq "ARRAY"){
@@ -657,10 +736,25 @@ sub AoA_with_rule_signatures {
     return $result;
 }
 
+sub sexpr { # s-expression
+    # per-parse variable.
+    shift;
+    
+    # get the rule's lhs
+    my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
+    
+    # Throw away any undef's
+    my @children = grep { defined } @_;
+    
+    return "$lhs(" . join(' ', @children) . ")";
+}
+
 sub tree { 
 
     # per-parse variable.
     shift;
+    
+#    say "# tree:\n", Dump [ map { ref $_ eq 'Tree::Simple' ? ref $_ : $_ } @_ ];
     
     # get the rule's lhs
     my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
@@ -715,6 +809,9 @@ sub xml {
     
     # Get the rule's lhs
     my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
+    
+    # replace symbols quantifier symbols (not valid in XML tags) with plural (hopefully)
+    $lhs =~ s/(\+|\*)$/s/;
     
     # wrap xml element
     return 
@@ -933,10 +1030,14 @@ sub parse
     for my $token (@$tokens){
 #say "# reading: ", Dump $token;
         if (ref $token->[0] eq "ARRAY"){ # ambiguous tokens
-            #
             # use alternate/end_input
-            #
-            # join tokens with '/' do token1/token2/token3 and read that ambiguous token
+            for my $alternative (@$token) {
+                my ($type, $value) = @$alternative;
+                $recognizer->alternative( $type, \$value, 1 )
+            }
+            $recognizer->earleme_complete();
+            # TODO:
+            # join tokens with '/' do token1/token2/token3 and read that ambiguous tokens to the grammar
             # and rely on grammar to have disambiguation rules token1 => 'token1/token2/token3'
             #
         }

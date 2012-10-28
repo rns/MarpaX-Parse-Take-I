@@ -85,6 +85,8 @@ my $me = Marpa::Easy->new({
 for my $input (@$inputs){
     my $input_str = join ' ', map { $_->[0] } @$input;
     my $value = $me->parse($input);
-    is $value, $input_str, "<$input_str> parsed with quantified symbols in recursive rules"
+    unless (is ref $value eq "ARRAY" ? join(' ', @$value) : $value, $input_str, "<$input_str> parsed with quantified symbols in recursive rules"){
+        say Dump $value;
+    }
 }
     

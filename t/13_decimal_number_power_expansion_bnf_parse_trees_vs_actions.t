@@ -2,7 +2,7 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 25;
+use Test::More;
 
 use YAML;
 
@@ -131,24 +131,24 @@ sub traverse_HoA{
     if (ref $tree->{expr} eq "HASH"){
         # positive integer
         if (ref $tree->{expr}->{num} eq "HASH"){
-            @int  = map { $_->{digit} } @{ $tree->{expr}->{num}->{integer} };
+            @int  = map { $_->{digit} } @{ $tree->{expr}->{num}->{integer}->{'digit+'} };
             @frac = ();
         }
         # positive float
         else{
-            @int  = map { $_->{digit} } @{ $tree->{expr}->{num}->[0]->{integer} };
-            @frac = map { $_->{digit} } @{ $tree->{expr}->{num}->[1]->{fractional}->[1] };
+            @int  = map { $_->{digit} } @{ $tree->{expr}->{num}->[0]->{integer}->{'digit+'} };
+            @frac = map { $_->{digit} } @{ $tree->{expr}->{num}->[1]->{fractional}->[1]->{'digit+'} };
         }
     }
     # negative float
     elsif (ref $tree->{expr}->[1]->{num} eq "ARRAY") {
-        @int  = map { $_->{digit} } @{ $tree->{expr}->[1]->{num}->[0]->{integer} };
-        @frac = map { $_->{digit} } @{ $tree->{expr}->[1]->{num}->[1]->{fractional}->[1] };
+        @int  = map { $_->{digit} } @{ $tree->{expr}->[1]->{num}->[0]->{integer}->{'digit+'} };
+        @frac = map { $_->{digit} } @{ $tree->{expr}->[1]->{num}->[1]->{fractional}->[1]->{'digit+'} };
         $neg  = 1;
     }
     # negative integer 
     else{
-        @int  = map { $_->{digit} } @{ $tree->{expr}->[1]->{num}->{integer} };
+        @int  = map { $_->{digit} } @{ $tree->{expr}->[1]->{num}->{integer}->{'digit+'} };
         @frac = ();
         $neg  = 1;
     }
@@ -163,8 +163,8 @@ sub traverse_HoH{
 
     my $tree = shift;
 
-    my @int = map { $_->{digit} } @{ $tree->{expr}->{num}->{integer} };
-    my @frac = map { $_->{digit} } @{ $tree->{expr}->{num}->{fractional} };
+    my @int = @{ $tree->{expr}->{num}->{integer}->{'digit+'}->{digit} };
+    my @frac = exists $tree->{expr}->{num}->{fractional} ? @{ $tree->{expr}->{num}->{fractional}->{'digit+'}->{digit} } : ();
     my $neg = $tree->{expr}->{minus};
 
     return [ \@int, \@frac, $neg ]
@@ -244,14 +244,14 @@ my $tree_traversers = {
     HoH     => \&traverse_HoH,
     xml     => \&traverse_xml,
     tree    => \&traverse_tree,
-    actions => sub { shift }, # what we need was returned by parse($number)
+#    actions => sub { shift }, # what we need was returned by parse($number)
 };
 
 #
 # power expansion of numbers for every parse tree type
 #
 for my $tree_type (sort keys %$tree_traversers){
-
+    
     # set up grammar
     my $mp = Marpa::Easy->new({ # Marpa::Parser
         rules           => $tree_type eq "actions" ? $grammar_with_actions : $grammar,
@@ -300,3 +300,4 @@ for my $tree_type (sort keys %$tree_traversers){
 
 } ## tree_type
 
+done_testing;

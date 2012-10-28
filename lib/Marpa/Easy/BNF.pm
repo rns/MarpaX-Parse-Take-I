@@ -61,6 +61,7 @@ my $bnf_rules = [
             # extract symbols  and action
             my ($symbols, $action) = map { $rule->{$_} } qw{ symbols action };
 #            say "# production/rhs/rule/symbols:\n", Dump $symbols;
+            $symbols = ref $symbols eq "ARRAY" ? $symbols : [ $symbols ];
             # add Marpa rules
             my $Marpa_rule = {
                 lhs => $lhs,

@@ -38,7 +38,8 @@ my $bnf_in_bnf = q{
     production ::= lhs '::=' rhs
         %{
             use Eval::Closure;
-
+            
+#            say "# production:\n", Dump \@_;
             my $lhs = $_[1];
             my @rhs = @{ $_[3] };
             my $rules = [];
@@ -47,6 +48,7 @@ my $bnf_in_bnf = q{
 #                say "# rhs:\n", Dump $rhs;
                 my ($symbols, $action ) = map { $rhs->{$_} } qw{ symbols action };
 #                say "# symbols:\n", Dump $symbols;
+                $symbols = ref $symbols eq "ARRAY" ? $symbols : [ $symbols ];
                 my $rule = {
                     lhs => $lhs,
                     rhs => $symbols,
@@ -78,18 +80,33 @@ my $bnf_in_bnf = q{
                 $_[3];                      # return rules aref
             %}
 
-    rule       ::= symbol+ action? 
-        %{ 
-            my $rule = {};
+# rule ::= symbol+ action? could be used, but the action of 'rules ::=' rule above
+# would be more complicated then
+    rule       ::= 
+          symbol+ 
+            %{ 
+                my $rule = {};
 
-            # add symbols
-            $rule->{symbols} = $_[1];
+                # add symbols
+                $rule->{symbols} = $_[1];
 
-            # set action, if any
-            $rule->{action} = $_[2] if defined $_[2];
+                $rule;
+            %}
+            
+        | symbol+ action 
+            %{ 
+                say "# rule:\n", Dump \@_;
 
-            $rule;
-        %}
+                my $rule = {};
+
+                # add symbols
+                $rule->{symbols} = $_[1];
+
+                # set action, if any
+                $rule->{action} = $_[2] if defined $_[2];
+
+                $rule;
+            %}
 
     action     ::= 'qr/%{.+?%}/'
     

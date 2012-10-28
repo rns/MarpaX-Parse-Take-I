@@ -30,7 +30,7 @@ my $numbers = [
 
 for my $number (@$numbers){
     my $tree = $bnf->parse($number);
-#    say $bnf->show_tree($tree);
+    say $bnf->show_parse_tree($tree);
     # assemble the number
     my @digits;
     $tree->traverse(
