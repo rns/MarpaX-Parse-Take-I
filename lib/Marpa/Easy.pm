@@ -25,6 +25,8 @@ use Encode qw{ encode is_utf8 };
 
 use XML::Twig;
 
+use Clone qw(clone);
+
 =head1 Synopsys
 
 input and output, e.g. 
@@ -172,7 +174,21 @@ sub new
     
     my $self = {};
     bless $self, $class;
+    
+    $self->build($options);
+    
+    return $self;
+}
 
+sub build{
+    
+    my $self = shift;
+    
+    my $options = shift;
+    
+    # clone options to enable adding rules to grammar
+    $self->{options} = clone $options;
+    
     # extract Marpa::Easy options and set defaults
     while (my ($option, $value) = each %$options){
         if (exists $marpa_easy_options->{$option}){
@@ -183,8 +199,6 @@ sub new
     # set defaults
     $self->{quantifier_rules} //= 'sequence';
     
-#    say Dump $self;
-
     # transform rules
     my @rules;
 
@@ -200,10 +214,8 @@ sub new
         $self->set_option('parsed_bnf_rules', \@rules);
     }
 
-#    say "# rules with quantifiers: ", Dump $options->{rules};
     # quantifiers to rules
     $self->_quantifiers_to_rules( \@rules );
-#    say "# rules with sequences: ", Dump $options->{rules};
 
     # extract closures and generate actions for Recognizer
     my $closures = _closures_to_actions( \@rules );
@@ -223,9 +235,6 @@ sub new
     # set transformed rules as Marpa grammar option
     $options->{rules} = \@rules;
     
-    # set options for adding rules to grammar
-    $self->{options} = $options;
-
     # set up the grammar
     my $grammar = Marpa::R2::Grammar->new($options);
     $grammar->precompute();
@@ -249,24 +258,31 @@ sub new
 
     # toggle BNF flag off, if it's on
     $bnf = 0 if $bnf;
-
-    return $self;
 }
 
+#
+# get current options (as-passed), get rules from them, merge new rules, 
+# make a new Marpa::Easy with the resulting options, replace $self with it
+# 
 sub add_rules { 
     
     my $self = shift;
 
     my $rules_to_add = shift;
+
+    # get initial options
+    my $options = $self->{options};
     
-    my $grammar = $self->grammar;
-    my $rules = $self->rules;
+    # $rules_to_add and $options->{rules} need to be both array refs or scalars (strings)
+    if (ref $rules_to_add eq "ARRAY" and ref $options->{rules} eq "ARRAY"){
+        push @{ $options->{rules} }, @$rules_to_add;
+    }
+    elsif (ref $rules_to_add eq "" and ref $options->{rules} eq ""){
+        $options->{rules} .= $rules_to_add;
+    }
     
-    # !!! rules will be hash refs after Marpa processing; delete 'check_symbols' from each of them
-    # make a new Marpa::Easy with $rules_to_add
-    # get rules from there 
-    # append them to our $rules
-    
+    # rebuild this instance
+    $self->build($options);
 }
 
 sub grammar { $_[0]->{grammar} }
