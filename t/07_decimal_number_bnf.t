@@ -10,8 +10,7 @@ use_ok 'Marpa::Easy';
 
 my $grammar = q{
 
-    # expression
-    expr ::= # expression
+    expr ::=                        
         '-' num 
         %{ 
             $_[1] .                 # negation
@@ -22,8 +21,8 @@ my $grammar = q{
         %{ 
             $_[1]                   # positive number
         %} 
-# num
-    num ::= 
+
+    num ::=                         
         digits
         %{ 
             join('', @{$_[1]})      # integer

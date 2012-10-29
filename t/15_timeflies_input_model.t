@@ -39,10 +39,6 @@ my $mp = Marpa::Easy->new({
     default_action => 'sexpr', # s-expression, that's right
 });
 
-#say $mp->grammar->show_rules;
-
-#say "# rules", Dump $mp->{options}->{rules};
-   
 isa_ok $mp, 'Marpa::Easy';
 
 # this lexical data will be added to those provided by WordNet
@@ -97,7 +93,6 @@ sub tokenize {
 }
 
 my $sentence = 'time flies like an arrow, but fruit flies like a banana';
-
 
 # we know we want multiple parses
 my @trees = $mp->parse( tokenize($sentence) );

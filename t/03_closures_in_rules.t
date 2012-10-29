@@ -7,12 +7,12 @@ use Test::More tests => 5;
 
 use_ok 'Marpa::Easy';
 
-=pod BNF for decimal numbers
-    expr    ::= - num | num 
-    num     ::= digits | digits . digits 
-    digits  ::= digit | digits digit
-    digit   ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
-=cut
+# The below is BNF for decimal numbers, no literals
+#
+#    expr    ::= - num | num 
+#    num     ::= digits | digits . digits 
+#    digits  ::= digit | digits digit
+#    digit   ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
 my $with_closures = Marpa::Easy->new({   
     rules   => [
@@ -91,7 +91,6 @@ my $numbers = [
 
 for my $number (@$numbers){
     my $value = $with_closures->parse($number);
-#    say "## value: ", Dump $value;
     my $expected = ref $number eq "ARRAY" ? join('', map { $_->[1] } @$number) : $number;
     is $value, $expected, "decimal number $expected parsed with closures in rules";
 }

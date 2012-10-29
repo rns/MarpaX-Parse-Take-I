@@ -46,7 +46,7 @@ unless (is $sexpr, '(expr - (num (digits (digit 1) (digits (digit 2) (digits (di
 
 # get the expected output by setting options and calling option methods directly
 for my $data (
-# option comment value
+# option, value
 [ 'symbols', q{0: expr
 1: '-', terminal
 2: num
@@ -263,5 +263,4 @@ literal: '9'} ],
     is $mp->$option, $expected, "diagnostic returned by calling $option directly";
 }
 
-#diag "# recognition_failures:\n",   $bnf->show_recognition_failures;
 done_testing;

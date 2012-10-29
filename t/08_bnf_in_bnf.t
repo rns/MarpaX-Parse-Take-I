@@ -14,7 +14,7 @@ Along the lines of BNF syntax in BNF:
 
     (1) Marpa::Easy->new will parse BNF to produce a Marpa grammar able to parse BNF grammars;
 
-    (2) The BNF Marpa grammar will parse decimal numbers grammar and produce a Marpa grammar able to parse decimal numbers; and
+    (2) The BNF Marpa grammar will parse the decimal numbers grammar and produce a Marpa grammar able to parse decimal numbers; and
 
     (3) That decimal numbers Marpa grammar will parse decimal numbers
     
@@ -81,7 +81,7 @@ my $bnf_in_bnf = q{
             %}
 
 # rule ::= symbol+ action? could be used, but the action of 'rules ::=' rule above
-# would be more complicated then
+# would be more complicated then due to the necessity to check for if action is defined
     rule       ::= 
           symbol+ 
             %{ 
@@ -125,7 +125,7 @@ my $bnf_bnf = Marpa::Easy->new({
 
 isa_ok $bnf_bnf, 'Marpa::Easy';
 
-# example grammar (comments are not supported)
+# example grammar (comments are not supported yet)
 my $decimal_numbers_grammar = q{
     expr    ::= '-' num | num
     num     ::= digits | digits '.' digits
@@ -135,15 +135,11 @@ my $decimal_numbers_grammar = q{
 
 my $decimal_number_rules = $bnf_bnf->parse($decimal_numbers_grammar);
 
-#say Dump $decimal_number_rules;
-
 # set up decimal number bnf
 my $decimal_number_bnf = Marpa::Easy->new({
     rules => $decimal_number_rules,
     default_action => 'xml',
 });
-
-#say $decimal_number_bnf->show_rules;
 
 # test decimal number bnf
 my $numbers = [

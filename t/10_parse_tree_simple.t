@@ -28,10 +28,11 @@ my $numbers = [
     '1234.423',
 ];
 
+# parse numbers
 for my $number (@$numbers){
     my $tree = $bnf->parse($number);
     say $bnf->show_parse_tree($tree);
-    # assemble the number
+    # reassemble the number from the digits
     my @digits;
     $tree->traverse(
         sub {
@@ -47,6 +48,6 @@ for my $number (@$numbers){
             }
         }
     );
-#    say @digits;
+    # compare the reassembled number with the input
     is join('', @digits), $number, "numeral $number parsed with pure BNF to a Tree::Simple parse tree";
 }

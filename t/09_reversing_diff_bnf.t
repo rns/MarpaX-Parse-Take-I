@@ -84,8 +84,6 @@ my $me = Marpa::Easy->new({
     default_action => 'AoA',
 });
 
-#say $me->grammar->show_rules;
-
 my $value = $me->parse($diff);
 
 is $value, $reversed_diff, "diff reversed (example from Parse::RecDescent tutorial)";

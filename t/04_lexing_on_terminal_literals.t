@@ -7,18 +7,18 @@ use Test::More tests => 4;
 
 use Marpa::Easy;
 
-=pod BNF for decimal numbers
-    expr    ::= '-' num | num 
-    num     ::= digits | digits '.' digits 
-    digits  ::= digit | digits digit
-    digit   ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
-=cut
+# The below is BNF for decimal numbers with literals
+#
+#    expr    ::= '-' num | num 
+#    num     ::= digits | digits '.' digits 
+#    digits  ::= digit | digits digit
+#    digit   ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
 my $m = Marpa::Easy->new({   
     start   => 'expr',
     rules   => [
         [ expr => [qw('-' num)], sub { $_[1] . $_[2] } ],
-        [ expr => [qw(num)],   sub { $_[1] } ],
+        [ expr => [qw(num)],     sub { $_[1] } ],
 
         [ num => [qw(digits)], 
           sub {

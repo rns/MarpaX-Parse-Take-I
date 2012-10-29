@@ -7,6 +7,14 @@ use Test::More tests => 3;
 
 use_ok 'Marpa::Easy';
 
+# The below is BNF for decimal numbers, no literals
+#
+#    expr    ::= - num | num 
+#    num     ::= digits | digits . digits 
+#    digits  ::= digit | digits digit
+#    digit   ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+
+# set up the grammar
 my $rules = [
 
     [ expr => [qw(- num)] ],
@@ -36,6 +44,7 @@ my $m = Marpa::Easy->new({
     default_action => 'AoA_with_rule_signatures',
 });
 
+# set up test data
 my $number = [
     [ '1', '1' ],
     [ '2', '2' ],
@@ -43,10 +52,8 @@ my $number = [
     [ '4', '4' ],
 ];
 
-my $value;
-
-$value = $m->parse($number);
-#say Dump $value;
+# parse
+my $value = $m->parse($number);
 
 is_deeply $value, Load(<<END_OF_PARSE), "numeral parsed with start symbol and default action AoA_with_rule_signatures";
 ---
@@ -90,7 +97,3 @@ is_deeply $value, Load(<<END_OF_PARSE), "numeral parsed with start symbol set au
   - 3
 - 4
 END_OF_PARSE
-
-#
-# TODO: more default actions: HoA AoH
-#

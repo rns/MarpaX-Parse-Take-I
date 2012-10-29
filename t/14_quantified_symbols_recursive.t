@@ -80,8 +80,6 @@ my $me = Marpa::Easy->new({
     quantifier_rules => 'recursive',
 });
 
-#say $me->show_rules();
-
 for my $input (@$inputs){
     my $input_str = join ' ', map { $_->[0] } @$input;
     my $value = $me->parse($input);

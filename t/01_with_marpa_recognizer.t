@@ -90,8 +90,8 @@ is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with Marpa::Easy
 END_OF_PARSE
 
 #
-# the same can be done with parse method of Marpa::Easy
-# default action AoA (array of arrays) will be set by Marpa::Easy
+# The same can be done with parse method of Marpa::Easy.
+# The default action AoA (array of arrays) will be set by Marpa::Easy.
 #
 my $me_AoA = Marpa::Easy->new({
     rules => $rules

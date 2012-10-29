@@ -35,7 +35,7 @@ my $grammar_with_actions = q{
     # decimal number, possibly signed and fractional
     
     # start
-    expr    ::= minus? num
+    expr        ::= minus? num
         %{ 
             # num is a HASH (see below the relevant rule action below)
             my $num = ( grep { ref eq "HASH" } @_ )[1];
@@ -78,7 +78,10 @@ my $numbers_and_series = [
     [ '1234.423',  '1*10^3 + 2*10^2 + 3*10^1 + 4*10^0 + 4*10^-1 + 2*10^-2 + 3*10^-3' ],
 ];
 
-# Note: show_parse_tree method of Marpa::Easy really helps with layout
+#
+# Note: show_parse_tree method of Marpa::Easy really helps with layout 
+# and construction of accessor expressions in a multileve data structure
+#
 
 #
 # parse tree: Array of Arrays

@@ -8,7 +8,8 @@ use YAML;
 use 5.010;
 use Marpa::Easy;
 
-no warnings; # this silences "Possible attempt to separate words with commas"
+# this silences "Possible attempt to separate words with commas", among others
+no warnings;
 
 my $rules = [
 
@@ -52,11 +53,11 @@ my $rules = [
             join '', @_[1..3]
       }
     ],  
-    [ LineRange  => [qw( LineNum                                                 )] ],
+    [ LineRange  => [qw( LineNum        )] ],
         
-    [ LineNum    => [qw( 'qr/\d+/'                                                 )] ],
-    [ LeftLine   => [qw( 'qr/<.*\n/'                                               )] ],
-    [ RightLine  => [qw( 'qr/>.*\n/'                                               )] ],
+    [ LineNum    => [qw( 'qr/\d+/'      )] ],
+    [ LeftLine   => [qw( 'qr/<.*\n/'    )] ],
+    [ RightLine  => [qw( 'qr/>.*\n/'    )] ],
 
 ];
 
@@ -97,8 +98,6 @@ my $me = Marpa::Easy->new({
     rules => $rules,
     default_action => 'AoA',
 });
-
-#say $me->grammar->show_rules;
 
 my $value = $me->parse($diff);
 
