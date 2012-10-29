@@ -6,8 +6,6 @@ use Test::More;
 
 use YAML;
 
-use WordNet::QueryData;
-
 use_ok 'Marpa::Easy';
 
 my $grammar = q{
