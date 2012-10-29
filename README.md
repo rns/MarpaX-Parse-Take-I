@@ -56,21 +56,13 @@ tree comparison.
 Other pre-reqs:
 
 	Marpa::R2
-
+	Clone
 	Eval::Closure
-
 	Math::Combinatorics
-
 	Test::Differences
-
 	Test::Output
-
 	Tree::Simple::View
-
 	Tree::Simple::Visitor
-
 	Tree::Simple
-
 	WordNet::QueryData
-
 	XML::Twig
