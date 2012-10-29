@@ -25,6 +25,79 @@ use Encode qw{ encode is_utf8 };
 
 use XML::Twig;
 
+=head1 Synopsys
+
+input and output, e.g. 
+    input: decimal number
+    output: power series of that number
+
+rules
+    - BNF grammar (scalar); or 
+    - Marpa::R2 rules array ref
+
+actions
+    - can be deferred until parsing    
+
+grammar
+
+    BNF parsing 
+
+        $bnf_parser
+        produces parsed rules to be transformed into Marpa::R2 rules 
+
+    rules transformation    
+        produces transformed rules; includes
+        - closures extraction
+        - adding rules for quantifier symbols
+        - default_action and start rule setting 
+        - lexer rules extraction (literals)
+    
+    Marpa::R2::Grammar
+        -- its rules become the value of 'rules' options 
+
+parsing of input    
+    
+    input can be 
+        - scalar (string); or 
+        - arrays of tokens (unambiguous or ambiguous)
+
+    lexing
+        scalar input is lexed by 
+            pre-lexing
+                - extrating literals from the grammar
+                - setting them up as regex => token type hash
+            lexing
+                - matching input and consuming the longest match
+        tokens    
+    
+    recognizing (Marpa::R2)
+        produces Marpa::R2 parse tree
+        
+    evaluation (Marpa::R2)
+        produces parse value that can be 
+            - final value
+            - tree to be evaluated by the application
+    
+evaluation of parse by the application
+    
+    default_action settings produce parse trees:
+    
+        - 'tree'    Tree::Simple 
+        - 'xml'     XML string
+        - 'sexpr'   S-expression
+        - 'AoA'     array of array
+        - 'HoA'     hash of arrays
+        - 'HoH'     hash of arrays
+    
+    that can be further evaluated by the application 
+    
+    Details are in 
+        10_parse_tree_simple.t
+        11_parse_tree_xml.t
+        13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t
+    
+=cut
+
 #
 # Any BNF grammar passed to Marpa::Easy by setting <rules> to scalar 
 # is parsed by the BNF parser with rules set in Marpa::Easy::BNF
