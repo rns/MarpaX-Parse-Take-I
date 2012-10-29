@@ -55,14 +55,20 @@ tree comparison.
 
 Other pre-reqs:
 
-	Marpa::R2
-	Clone
-	Eval::Closure
-	Math::Combinatorics
-	Test::Differences
-	Test::Output
-	Tree::Simple::View
-	Tree::Simple::Visitor
-	Tree::Simple
-	WordNet::QueryData
-	XML::Twig
+	core
+
+		Marpa::R2
+		Clone
+		Eval::Closure
+		Math::Combinatorics
+
+	parse trees
+
+		Tree::Simple::View
+		Tree::Simple::Visitor
+		Tree::Simple
+		XML::Twig
+
+	optional, to run [15_timeflies_input_model.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t)
+
+		WordNet::QueryData -- 
