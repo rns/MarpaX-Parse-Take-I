@@ -51,5 +51,5 @@ tutorial done in BNF with actions.
 [13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t) -- Parse 
 tree comparison.
 
-[15_timeflies_input_model.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t) -- getting part of speech data from WordNet::QueryData 
-that is a pre-req.
+[15_timeflies_input_model.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t) -- getting part of speech data from WordNet::QueryData (which is a pre-req) and parsing 'time flies ...' sentence.
+
