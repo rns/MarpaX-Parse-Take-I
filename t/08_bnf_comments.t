@@ -4,6 +4,8 @@ use warnings;
 
 use Test::More tests => 4;
 
+use Test::Differences;
+
 use YAML;
 
 use_ok 'Marpa::Easy';
@@ -155,8 +157,6 @@ literal: "qr/'.+?'/"
 identifier: identifier
 ::=: ::=
 literal: 'qr/\w+(\?|\*|\+)?/'};
-
-use Test::Differences;
 
 eq_or_diff_text $bnf->show_bnf_tokens, $expected_tokens, "BNF text tokenized";
 

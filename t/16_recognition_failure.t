@@ -32,25 +32,15 @@ my $mp = Marpa::Easy->new({
 
 $mp->parse($number);
 
-my $expected = <<EOT;
-# tokens:
-'-': -
-'1': 1
-'2': 2
-'3': 3
-'4': 4
-'.': .
-'4': 4
-'2': 2
-'3': 3
-::any: , 1123
+TODO: {
+
+todo_skip "No grammar/input devised to test recognition failures yet", 1;
+
+my $expected_recognition_failures = <<EOT;
 EOT
 
-$mp->parse($number);
+is $mp->show_recognition_failures, $expected_recognition_failures, "recognitions failures handled";
 
-eval { $mp->parse($number) } ; warn $@ if $@;
-
-# TODO: produce non-fatal errors to test recognition_failure_sub
-diag "recognition_failures:\n", $mp->show_recognition_failures;
+}
 
 done_testing;

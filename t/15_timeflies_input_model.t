@@ -52,6 +52,11 @@ my $lex = {
                             
 };
 
+SKIP: {
+
+eval { require WordNet::QueryData };
+skip "WordNet::QueryData not installed", 1 if $@;
+
 sub tokenize {
 
     my $text = shift;
@@ -103,5 +108,7 @@ my $expected = q{(Sentence (Clause (Subject (noun (bare_noun time))) (Verb flies
 (Sentence (Clause (Subject (adjective time) (noun (bare_noun flies))) (Verb like) (Object (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (adjective fruit) (noun (bare_noun flies))) (Verb like) (Object (noun (article a) (bare_noun banana)))))};
 
 is join("\n", map { $mp->show_parse_tree($_) } @trees), $expected, "'$sentence' parsed";
+
+} ## SKIP
 
 done_testing;

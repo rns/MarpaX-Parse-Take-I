@@ -1178,7 +1178,6 @@ sub parse
     my $recognizer = Marpa::R2::Recognizer->new( { 
         grammar => $grammar, 
         closures => $closures,
-#        trace_terminals => 2,
     } ) or die 'Failed to create recognizer';
     
     # read tokens
