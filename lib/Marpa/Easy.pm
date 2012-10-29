@@ -614,16 +614,8 @@ sub _set_default_action
     $self->{default_action} = $options->{default_action};
 }
 
-#
-# lexer rules are derived from
-# (1)   rules like lhs => terminal, 
-#       terminal => lhs
-# (2)   literal symbols ('s' or "s")
-#       's' => 's' "s" => "s"
-# (3)   other terminals, e.g. - and . in decimal numbers grammar
-#       terminal => terminal
-# Terminals and literals can be strings (pat), regexes (qr/pat/)or regexes in strings 'qr/pat/'
-#
+# lexer rules are derived from literal terminals, which can be 
+# strings or qr// patterns in single or double quotes
 sub _extract_lexer_rules
 {
     my $self = shift;
@@ -769,8 +761,7 @@ sub _closures_to_actions
 
 sub AoA { 
 
-    # The first argument is the per-parse variable.
-    # At this stage, just throw it away
+    # The per-parse variable.
     shift;
 
     # Throw away any undef's
@@ -782,8 +773,7 @@ sub AoA {
 
 sub HoA { 
 
-    # The first argument is the per-parse variable.
-    # At this stage, just throw it away
+    # The per-parse variable.
     shift;
 
     # Throw away any undef's
@@ -798,8 +788,7 @@ sub HoA {
 
 sub HoH { 
 
-    # The first argument is the per-parse variable.
-    # At this stage, just throw it away
+    # The per-parse variable.
     shift;
 
     # Get the rule's lhs
@@ -847,10 +836,6 @@ sub AoA_with_rule_signatures {
 
 #    say "# AoA_with_rule_signatures ", Dump \@_;
 
-    # Get the rule lhs and rhs and make the rule signature
-    my ($lhs, @rhs) = $Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule);
-    my $rule = $lhs . ' -> ' . join ' ', @rhs;
-
     # per-parse variable.
     shift;
     
@@ -860,17 +845,23 @@ sub AoA_with_rule_signatures {
     # Return what's left as an array ref or a scalar
     my $result = scalar @children > 1 ? \@children : shift @children;
     
+    # Get the rule lhs and rhs and make the rule signature
+    my ($lhs, @rhs) = $Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule);
+    my $rule = $lhs . ' -> ' . join ' ', @rhs;
+
     $result = [ $result ];
     unshift @$result, $rule;
 
     return $result;
 }
 
-sub sexpr { # s-expression
-    # per-parse variable.
+# s-expression
+sub sexpr { 
+
+    # The per-parse variable.
     shift;
     
-    # get the rule's lhs
+    # Get the rule's lhs
     my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
     
     # Throw away any undef's
@@ -881,7 +872,7 @@ sub sexpr { # s-expression
 
 sub tree { 
 
-    # per-parse variable.
+    # The per-parse variable.
     shift;
     
 #    say "# tree:\n", Dump [ map { ref $_ eq 'Tree::Simple' ? ref $_ : $_ } @_ ];
@@ -907,7 +898,7 @@ sub tree {
     return $node;
 }
 
-# remove unneed Tree::Simple information from Data::TreeDumper's output
+# remove unneeded Tree::Simple information from Data::TreeDumper's output
 sub filter
 {
     my $s = shift;
@@ -935,7 +926,7 @@ sub xml {
 
 #    say Dump \@_;
     
-    # per-parse variable.
+    # The per-parse variable.
     shift;
     
     # Get the rule's lhs
@@ -1073,7 +1064,7 @@ sub lex
         # get longest match(es)
         my $max_len = length $matches[0];
         my @max_len_tokens = grep { length $_ eq $max_len } @matches;
-        # set [ token, value ] pairs
+        # set [ token_type, token_value ] pairs
         my @matched_tokens;
         # get token types of token values
         for my $token_value (@max_len_tokens){
@@ -1187,13 +1178,8 @@ sub parse
             $recognizer->earleme_complete();
             # TODO: join tokens with '/' do token1/token2/token3 and read that ambiguous tokens to the grammar
             # and rely on grammar to have disambiguation rules token1 => 'token1/token2/token3'
-            #
         }
         else{ # unambiguous token
-            # TODO: add more recognition failure context (expected tokens, etc.)
-            #   "full situational awareness"
-            #   current token
-            #   expected tokens
             defined $recognizer->read( @$token ) or $self->{recognition_failure_sub}->($recognizer, $i, $tokens) or die "Parse failed";
         }
     }
