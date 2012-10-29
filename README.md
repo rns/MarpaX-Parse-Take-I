@@ -4,7 +4,7 @@ Marpa-Easy-proof-of-concept
 This module is an attempt at providing an easy-to-use interface 
 to Marpa::R2.
 
-"Easy-to-use" currently means that a user can passset 'rules' argument 
+"Easy-to-use" currently means that a user can set the 'rules' argument 
 of Marpa::R2::Grammar to a string containing a BNF grammar (which
 may define actions in %{ %} tags), whose literals will be extracted and 
 used to lex the input, call parse method on the input and receive 
@@ -36,7 +36,7 @@ setting the basis for further parsing of BNF to Marpa::R2 rules.
 [06_reversing_diff.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/06_reversing_diff.t) -- An example from the Parse::RecDescent 
 tutorial, done the Marpa way.
 
-[07_decimal_number_bnf.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/07_decimal_number_bnf.t) -- A BNF grammar with actions that can parse a posible signed decimal 
+[07_decimal_number_bnf.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/07_decimal_number_bnf.t) -- A BNF grammar with actions that can parse a possible signed decimal 
 number, integer or float.
 
 [08_bnf_in_bnf.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/08_bnf_in_bnf.t) -- A BNF grammar that can parse a BNF grammar that can parse a decimal number
