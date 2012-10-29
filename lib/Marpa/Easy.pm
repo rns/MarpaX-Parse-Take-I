@@ -325,7 +325,7 @@ sub _quantifiers_to_rules
         }
     }
 
-    # add rules with nullable symbols
+    # generate and add rules with nullable symbols
     my @rules_with_nullables;
     for my $j (keys %$nullable_symbol_indices){
         my $rule = $rules->[$j];
@@ -379,17 +379,7 @@ sub _extract_start_symbol
     
     my $rule0 = $rules->[0];
     
-    my $start;
-    
-    given (ref $rule0){
-        when ("HASH"){
-            $start = $rule0->{lhs};
-        }
-        when ("ARRAY"){
-            # get the rule's parts
-            $start = $rule0->[0];
-        }
-    }
+    my $start = ref $rule0 eq "HASH" ? $rule0->{lhs} : $rule0->[0];
     
     return $start;
 }
