@@ -4,6 +4,8 @@ use 5.010;
 use strict;
 use warnings;
 
+use Carp qw{cluck};
+
 use YAML;
 
 use Marpa::R2;
@@ -38,22 +40,36 @@ use XML::Twig;
 
 my $marpa_easy_options = {
 
-    # BNF grammar parser set as <rules> option
+    # stage: BNF grammar parser initialization
     show_bnf_parser_tokens => undef,
     show_bnf_parser_rules => undef,    
     show_bnf_parser_closures => undef, 
     show_parsed_bnf_rules => undef,    
     
-    # parsing the BNF grammar set as <rules> option
+    # stage: parsing the BNF grammar text set as <rules> option
     show_bnf_tokens => undef,
     show_bnf_rules => undef,    
     show_bnf_closures => undef, 
     
-    # show parsing input by BNF or Marpa::R2 rules set as <rules> option
+    # stage: pre-lexing
+    # extracting lexer rules from the grammar rules (terminal literals)
+    show_literals => undef,
+    show_lexer_rules => undef,
+    # setting up lexer regexes based on lexer rules 
+    show_lexer_regexes => undef,
+
+    # stage: lexing input for parsing (BNF parser and input)
     show_input => undef,
     show_tokens => undef,
+    
+    # stage: transforming BNF or Marpa::R2 rules passed in 'rules' option 
+    # and setting up the grammar based on them
     show_rules => undef,
     show_closures => undef,
+    
+    # stage: parsing input with BNF or Marpa::R2 rules passed in 'rules' option
+    show_symbols => undef,
+    show_terminals => undef,
     
     # sequence or recursive
     quantifier_rules => undef,
@@ -63,11 +79,9 @@ my $marpa_easy_options = {
 my $bnf = 0; # indicates that BNF grammar scalar rather than rules aref was passed
 
 #
-# TODO: BNF parser needs to be package variable of Marpa::Easy
+# BNF parser needs to be package variable of Marpa::Easy
+# to prevent repeated transformation of its rules
 #   
-#   $self->bnf_parser
-#
-
 # BNF parser grammar setup
 my $bnf_parser = Marpa::Easy->new({ 
     rules => Marpa::Easy::BNF::rules,
@@ -106,7 +120,7 @@ sub new
         $bnf = 1;
         my $rules = $self->_bnf_to_rules( $options->{rules} );
         @rules = @$rules;
-        $self->{parsed_bnf_rules} = $rules;
+        $self->set_option('parsed_bnf_rules', \@rules);
     }
 
 #    say "# rules with quantifiers: ", Dump $options->{rules};
@@ -126,32 +140,37 @@ sub new
         $options->{start} = _extract_start_symbol( \@rules );
     }
 
+    # save transformed rules for further adding to them 
+    $self->set_option('transformed_rules', \@rules);
+    
     # set transformed rules as Marpa grammar option
     $options->{rules} = \@rules;
-
-    # set options for grammar augmentation
+    
+    # set options for adding rules to grammar
     $self->{options} = $options;
 
     # set up the grammar
     my $grammar = Marpa::R2::Grammar->new($options);
     $grammar->precompute();
     
-    # save bnf rules
-    if ($bnf){
-        $self->{bnf_rules} = $grammar->show_rules;
-        chomp $self->{bnf_rules};
-    }
-    
-    # save terminals for lexing
-    my $terminals = $self->_extract_terminals( \@rules, $grammar );
-    
-    # save lexer rules
-    $self->{lexer_rules} = $self->_extract_lexer_rules( $options->{rules} );
-
     # save grammar
     $self->{grammar} = $grammar;
     
-    # toggle BNF flag off
+    # set rules option
+    $self->set_option('rules', $grammar->show_rules);
+    
+    # save bnf rules
+    if ($bnf){
+        $self->set_option('bnf_rules', $grammar->show_rules);
+    }
+    
+    # extract save terminals for lexing
+    my $terminals = $self->_extract_terminals( \@rules, $grammar );
+    
+    # extract and save lexer rules
+    $self->set_option('lexer_rules', $self->_extract_lexer_rules( $options->{rules} ) );
+
+    # toggle BNF flag off, if it's on
     $bnf = 0 if $bnf;
 
     return $self;
@@ -175,13 +194,123 @@ sub add_rules {
 
 sub grammar { $_[0]->{grammar} }
 
-sub show_closures               { Dump $_[0]->{closures} }
+# set the value to {$option} key to be printed if "show_$option" is set in the constructor
+sub set_option{
 
-sub show_parsed_bnf_rules       { Dump $_[0]->{parsed_bnf_rules} }
-sub show_bnf_tokens             { $_[0]->{bnf_tokens} }
-sub show_bnf_rules              { $_[0]->{bnf_rules} }
-sub show_bnf_closures           { Dump $_[0]->{bnf_closures} }
+    my $self = shift;
 
+    my $option = shift;
+    my $value = shift;
+
+    $self->{"$option"} = $value;
+}
+
+# return show_$option value or say show_$option's value if show_$option is set to true in the constructor
+sub get_option{
+
+    my $self = shift;
+
+    my $option = shift;
+    my $value = $self->{$option} or cluck "value of option '$option' undefined";
+
+    # stringify the option value
+    if (ref $value ~~ ["ARRAY", "HASH"]){
+#        say "# stringfying $option:\n", Dump $value;
+        # tokens
+        if ($option eq 'tokens'){
+            my $text = '';
+
+            for my $token (@$value){
+                if ($token->[0] eq "ARRAY"){ # ambigious tokens
+                    $text .= "\n" . join("\n", map { join ': ', @$_ } @$token) . "\n";
+                }
+                else{ # unambigious tokens
+                    $text .= join (': ', @$token) . "\n";
+                }
+            }
+
+            $value = $text; # set return value
+        }
+        # rules
+        elsif ($option eq 'rules'){
+            my $rules = $self->grammar->show_rules; 
+            $value = $rules;
+        }
+        # symbols
+        elsif ($option eq 'symbols'){
+            my $symbols = $self->grammar->show_symbols;
+            $value = $symbols;
+        }
+        # terminals
+        elsif ($option eq 'terminals'){
+            $value = join "\n", sort @{ $self->{terminals} }
+        }
+        # lexer rules
+        elsif ($option eq 'lexer_rules'){
+            my $lr = $self->{lexer_rules};
+            $value = join "\n", map { join ': ', $_, $lr->{$_} } sort keys %$lr;
+        }
+        # anything else
+        else{
+            $value = Dump $value;
+            $value =~ s/^---\n//s;
+        }
+    } ## stringify the option value
+
+    chomp $value;
+    
+    return $value;
+}
+
+sub comment_option {
+    my $self = shift;
+
+    # we derive the comment from the option
+    my $comment = shift; 
+
+    # make the comment more readable
+    $comment =~ s/_/ /g;
+    $comment =~ s/bnf/BNF/g;
+    
+    return "# $comment:";
+}
+
+# print the value of $option to stdout if show_$option is set to true in the constructor
+sub show_option{
+    my $self = shift;
+
+    my $option = shift;
+
+    if ($self->{"show_$option"}){
+        my $comment = $self->comment_option($option);
+        say join "\n", $comment, $self->get_option($option);
+    }
+}
+
+# options getters
+
+sub show_parsed_bnf_rules       { $_[0]->get_option('parsed_bnf_rules') }
+sub show_transformed_bnf_rules  { $_[0]->get_option('transformed_bnf_rules') }
+sub show_closures               { $_[0]->get_option('closures') }
+
+sub show_bnf_tokens             { $_[0]->get_option('bnf_tokens') }
+sub show_bnf_rules              { $_[0]->get_option('bnf_rules') }
+sub show_bnf_closures           { $_[0]->get_option('bnf_closures') }
+
+sub show_tokens                 { $_[0]->get_option('tokens') }
+sub show_rules                  { $_[0]->get_option('rules') }
+sub show_symbols                { $_[0]->get_option('symbols') }
+sub show_terminals              { $_[0]->get_option('terminals') }
+
+sub show_lexer_rules            { $_[0]->get_option('lexer_rules') }
+sub show_literals               { $_[0]->get_option('literals') }
+
+sub show_lexer_regexes          { $_[0]->get_option('lexer_regexes') }
+
+sub show_recognition_failures   { Dump $_[0]->{recognition_failures} }
+
+# parse BNF to what will become Marpa::R2 rules after transformation 
+# (extraction of closures, adding rules for quantifiers, extraction of lexer rules, etc.)
 sub _bnf_to_rules
 {
     my $self = shift;
@@ -192,16 +321,16 @@ sub _bnf_to_rules
     my $bnf_tokens = Marpa::Easy::BNF->lex_bnf_text($bnf);
 
     # save bnf tokens
-    $self->{bnf_tokens} = join "\n", map { join ': ', @$_ } @$bnf_tokens;
+    $self->set_option('bnf_tokens', join "\n", map { join ': ', @$_ } @$bnf_tokens);
 
     # show BNF tokens if the option is set
-    say "# BNF tokens:\n", $self->show_bnf_tokens if $self->{show_bnf_tokens};
+    # say "# BNF tokens:\n", $self->show_bnf_tokens if $self->{show_bnf_tokens};
+    $self->show_option('bnf_tokens');
     
-    # BNF parser grammar setup
     # $bnf_parser is a package variable
-    # TODO: bnf parser tokens, rulesm closures need to be shown here if the options are set
+    # TODO: show bnf parser tokens, rules, and closures if the relevant options are set
     
-    # transform BNF tokens to Marpa::R2 rules
+    # parse BNF tokens to Marpa::R2 rules
     my $rules = $bnf_parser->parse($bnf_tokens);
     
     return $rules;
@@ -210,13 +339,13 @@ sub _bnf_to_rules
 =head2
     
     For each symbol ending with * or + add a Marpa sequence rule 
-    with lhs being the symbol the min => 0 or min => 1
+    with lhs being the symbol, rhs being symbols without the quantifier 
+    the min => 0 or min => 1, respectively
     
     For each symbol ending with ?, add a new rule without such symbol
-    and remove ? from the synmbol's end.
+    and remove ? from the symbol's end. 
     
-    TODO:
-        handle several quantified symbols in in one rules, e.g. article? adjective? noun
+    Several symbols may be zero (? *)-quantified and all needed rules will be added.
     
 =cut
 sub _quantifiers_to_rules
@@ -404,23 +533,6 @@ sub _set_default_action
     $self->{default_action} = $options->{default_action};
 }
 
-sub show_lexer_rules
-{
-    my $self = shift;
-    
-    my $LRs = $self->{lexer_rules};
-    
-    my $text = '';
-    for my $lr (sort keys %$LRs){
-        $text .= join( ': ', $lr, $LRs->{$lr} ) . "\n";
-    }
-    chomp $text;
-    
-    return $text;
-}
-
-sub show_literals{ join "\n", sort @{ $_[0]->{literals} } }
-
 #
 # lexer rules are derived from
 # (1)   rules like lhs => terminal, 
@@ -438,10 +550,10 @@ sub _extract_lexer_rules
     my $rules = shift;
     my $terminals = $self->{terminals};
     
-#    say "# rules ", Dump $rules;
-#    say "# symbols", Dump $self->{symbols};
-#    say "# terminals ", Dump $terminals;
-    
+    $self->show_option('rules');
+    $self->show_option('symbols');
+    $self->show_option('terminals');
+
     my $lr = {};
 
     # lexer rules are formed by terminals wrapped in single or double quotes
@@ -458,9 +570,9 @@ sub _extract_lexer_rules
             $lr->{$literal} = $terminal;
         }
     }
-    $self->{literals} = \@literals;
-    
-    $self->{lexer_rules} = $lr; 
+    # save and show literals if show_literals is set
+    $self->set_option('literals', join "\n", sort @literals );
+    $self->show_option('literals');
     
     return $lr;
 }
@@ -714,6 +826,7 @@ sub tree {
     return $node;
 }
 
+# remove unneed Tree::Simple information from Data::TreeDumper's output
 sub filter
 {
     my $s = shift;
@@ -804,8 +917,7 @@ sub show_parse_tree{
     }
 }
 
-sub show_lexer_regexes{ $_[0]->{lexer_regexes} }
-
+# TODO: pluggable lexer (Parse::Flex, etc.)
 sub lex
 {
     my $self = shift;
@@ -813,12 +925,22 @@ sub lex
 #    say "# lexing: ", Dump \@_;
     
     my $input = shift;
+    
     my $lex = shift || $self->{lexer_rules};
 
-#    say "# lexing: lexer rules ", $self->show_lexer_rules($lex);
+    $self->set_option('input', $input);
+    $self->show_option('input');
+   
+    $self->show_option('rules');
+    $self->show_option('symbols');
+    $self->show_option('terminals');
+    $self->show_option('literals');
+
+    $self->show_option('lexer_rules');
 
     # TODO: add 'default' rule (as in given/when) to apply when 
     # none of the other rules matched (for BNF parsing)
+
     # make regexes of strings and qr// in strings leaving regexes proper as is
     my $lex_re = {};
     for my $l (keys %$lex){
@@ -837,20 +959,21 @@ sub lex
         }
         $lex_re->{$l_re} = $lex->{$l};
     }
-    $self->{lexer_regexes} = Dump $lex_re;
+    $self->{lexer_regexes} = $lex_re;
     chomp $self->{lexer_regexes};
-#    say "# lex regexps:\n", Dump $lex_re;
+    $self->show_option('lexer_regexes');
 
     my $tokens = [];
     my $i;
 
     my $max_iterations = 1000000;
-    
+
+    $self->show_option('show_input');
+        
     while ($i++ < $max_iterations){
         # trim input start
         $input =~ s/^\s+//s;
         $input =~ s/^\s+//s;
-# TODO: show_input
 #say "# input: <$input>";
         # match reach regex at string beginning
         my $matches = {};
@@ -897,30 +1020,6 @@ sub lex
     return $tokens;
 }
 
-sub show_tokens
-{
-    my $self = shift;
-    
-    my $tokens = shift || $self->{tokens};
-    
-    my $text = '';
-    
-    for my $token (@$tokens){
-        if ($token->[0] eq "ARRAY"){ # ambigious tokens
-            $text .= "\n" . join("\n", map { join ': ', @$_ } @$token) . "\n";
-        }
-        else{ # unambigious tokens
-            $text .= join (': ', @$token) . "\n";
-        }
-    }
-    
-    chomp $text;
-    
-    return $text;
-}
-
-sub show_recognition_failures{ Dump $_[0]->{recognition_failures} }
-
 sub recognition_failure {
     my $self = shift;
     my $token = shift;
@@ -932,9 +1031,6 @@ sub recognition_failure {
     };
 }
 
-sub show_rules      { my $rules = $_[0]->grammar->show_rules; chomp $rules; $rules }
-sub show_symbols    { my $symbols = $_[0]->grammar->show_symbols; chomp $symbols; $symbols }
-sub show_terminals  { join "\n", sort @{ $_[0]->{terminals} } }
 
 sub parse
 {
@@ -944,17 +1040,30 @@ sub parse
     # init recognition failures
     $self->{recognition_failures} = [];
     
+    $self->show_option('bnf_tokens');
+    $self->show_option('bnf_rules');
+
     # input can be token/value pair arrayref or a string
-    my $tokens = ref $input eq "ARRAY" ? $input : $self->lex($input);
+    my $tokens;
+    if (ref $input eq "ARRAY"){
+        $tokens = $input;
+        $self->show_option('rules');
+        $self->show_option('symbols');
+        $self->show_option('terminals');
+        $self->show_option('literals');
+    }
+    else{
+        $tokens = $self->lex($input);
+    }
     
-    say "# tokens \n", $self->show_tokens($tokens) if $self->{show_tokens};
+    $self->set_option('tokens', $tokens);
+    $self->show_option('tokens');
     
     # get grammar and closures
     my $grammar  = $self->{grammar};
     my $closures = $self->{closures};
     
-    say "# rules \n", $grammar->show_rules if $self->{show_rules};
-    say "# closures \n", $self->show_closures if $self->{show_closures};
+    $self->show_option('closures');
 
     # setup recognizer
     my $recognizer = Marpa::R2::Recognizer->new( { 
@@ -973,8 +1082,7 @@ sub parse
                 $recognizer->alternative( $type, \$value, 1 )
             }
             $recognizer->earleme_complete();
-            # TODO:
-            # join tokens with '/' do token1/token2/token3 and read that ambiguous tokens to the grammar
+            # TODO: join tokens with '/' do token1/token2/token3 and read that ambiguous tokens to the grammar
             # and rely on grammar to have disambiguation rules token1 => 'token1/token2/token3'
             #
         }
