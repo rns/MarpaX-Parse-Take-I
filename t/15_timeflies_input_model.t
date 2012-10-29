@@ -16,7 +16,8 @@ my $grammar = q{
           Clause
         | Clause comma conjunction Clause
     
-    Clause  ::= Subject Verb Object Manner?  # place time, but we have no sentence for them (yet)
+    Clause  ::= Subject Verb Object Manner? # Place Time
+                                            # but we have no sentence for them (yet)
     
     Subject ::= adjective? noun
     Object  ::= adjective? noun
@@ -46,12 +47,12 @@ isa_ok $mp, 'Marpa::Easy';
 
 # this lexical data will be added to those provided by WordNet
 my $lex = {
-    a   => [ 'ia' ],        # indefinite articles ...
+    a   => [ 'ia' ],        # indefinite articles
     an  => [ 'ia' ],
     but => [ 'conj' ],      # but is a coordinating conjunction in addition to
                             # WordNet's adverb
     time  => [ 'a' ],       # nouns can be adjectives as they can modify other nouns 
-    fruit => [ 'a' ],       # which WordNet sadly knows nothing about
+    fruit => [ 'a' ],       # which WordNet seems to be sadly knowing nothing about
                             
 };
 
