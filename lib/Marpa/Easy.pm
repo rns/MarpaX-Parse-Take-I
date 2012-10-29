@@ -227,13 +227,15 @@ sub _quantifiers_to_rules
     
 #    say "# rules ", Dump $rules;
     
-    # symbols quantified with * or ? require adding rules without such symbols
+    # symbols quantified with * or + require adding sequence rules
     my $quantified_symbol_rules = [];
-    # more than one symbol per rules can be  * or ? quantified
-    # {quantified_rule_index}->{nullable_symbol_index}
+
+    # symbols quantified with * or ? require adding rules without such symbols
+    # more than one symbol per rules can be  * or ? quantified hence 
+    # $nullable_symbol_indices->{quantified_rule_index}->{nullable_symbol_index}
     my $nullable_symbol_indices = {};
     
-    # prevent sequence's lhs duplication
+    # prevent duplication of sequence rules' lhs 
     my $sequence_lhs = {}; 
     
     # process rules
@@ -269,25 +271,6 @@ sub _quantifiers_to_rules
 #                        say "# zero or one ", Dump $rule;
                         # set rule's nullable symbol indices
                         $nullable_symbol_indices->{$j}->{$i} = undef;
-
-=pod this is done with $nullable_symbol_indices below
-                        # add rule without the quantified symbol
-                        my @non_quantified_rhs = grep { $symbol ne $_ } @$rhs;
-#                        say "# non_quantified_rhs ", Dump \@non_quantified_rhs;
-                        given (ref $rule){
-                            when ("HASH"){
-                                my %non_quantified_rule = %$rule;
-                                $non_quantified_rule{rhs} = \@non_quantified_rhs; 
-                                push @$quantified_symbol_rules, \%non_quantified_rule;
-                            }
-                            when ("ARRAY"){
-                                my @non_quantified_rule = @$rule;
-                                $non_quantified_rule[1] = \@non_quantified_rhs;
-                                push @$quantified_symbol_rules, \@non_quantified_rule;
-                            }
-                        }
-=cut
-
                         # replace quantified symbol to non-quantified in the rule
                         $rhs->[$i] = $non_quantified_symbol;
                     }
@@ -295,20 +278,6 @@ sub _quantifiers_to_rules
                     when ([qw(* +)]){
                         
                         # sequence lhs must be unique
-=pod                            
-
-# sequence with proper separators for grouping
-sequence ::= item (separator item)*
-
-lhs     => $symbol
-rhs     => [ "$symbol_$quantifier_item" ]
-action  => sub { [ $_[1] ] }
-
-lhs     => $symbol
-rhs     => [ "$symbol_$quantifier_item", $separator, $symbol ]
-action  => sub { push @{ $_[2] }, $_[1]; $_[2] }
-
-=cut                            
                         unless (exists $sequence_lhs->{$symbol} ){
                             if ($self->{quantifier_rules} eq 'recursive'){
 #                                say "sequences as recursive rules";
@@ -346,22 +315,9 @@ action  => sub { push @{ $_[2] }, $_[1]; $_[2] }
                             }
                             $sequence_lhs->{$symbol} = undef;
                         }
-                        # add rule with deleted $symbol* deleted
+                        # set rule's nullable symbol indices
                         if ($quantifier eq '*'){
-                            # set rule's nullable symbol indices
                             $nullable_symbol_indices->{$j}->{$i} = undef;
-
-=pod this is done with $nullable_symbol_indices below
-                            if ($self->{quantifier_rules} eq 'recursive'){
-#                            say "adding rule with $symbol deleted";
-#                            say "removing $symbol";
-                                push @$quantified_symbol_rules, { 
-                                    lhs     => $lhs,
-                                    rhs     => [ grep { $_ ne $symbol } @$rhs ],
-                                }
-                            }
-=cut                            
-
                         }
                     }
                 }
