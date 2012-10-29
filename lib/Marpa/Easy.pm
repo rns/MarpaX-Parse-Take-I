@@ -654,19 +654,10 @@ sub AoA_with_rule_signatures {
 
 #    say "# AoA_with_rule_signatures ", Dump \@_;
 
-    # Get the matched rule lhs and rhs and make the rule signature
-    # TODO: rules needn't be checked for definedness with the next dev version of Marpa
-    my $rule_id = $Marpa::R2::Context::rule;
-    my $rule = 'undefined';
-    if (defined $rule_id){     
-        my ($lhs, @rhs);
-        my $g       = $Marpa::R2::Context::grammar;
+    # Get the rule lhs and rhs and make the rule signature
+    my ($lhs, @rhs) = $Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule);
+    my $rule = $lhs . ' -> ' . join ' ', @rhs;
 
-        ($lhs, @rhs) = $g->rule($rule_id);
-        my $rhs = join " ", @rhs;
-        $rule = "$lhs -> $rhs";
-    }
-    
     # per-parse variable.
     shift;
     
