@@ -153,6 +153,8 @@ my $marpa_easy_options = {
     # transform quantified symbols into sequence (by default) or recursive rules
     quantifier_rules => undef,
     
+    # handle ambuous tokens with input model (alternate()/earleme_complete()
+    ambiguity => undef,
 };
 
 #
@@ -195,7 +197,8 @@ sub build{
         }
     }
     # set defaults
-    $self->{quantifier_rules} //= 'sequence';
+    $self->{quantifier_rules}   //= 'sequence';
+    $self->{ambiguity}          //= 'input_model';
     
     # transform rules
     my @rules;
@@ -1158,6 +1161,10 @@ sub parse
         $self->show_option('symbols');
         $self->show_option('terminals');
         $self->show_option('literals');
+        # if tokens are ambiguous, generate and add rules for them before parsing
+        if ($self->{ambiguity} eq 'tokens' ){ # and tokens are and 
+
+        }
     }
     else{
         $tokens = $self->lex($input);
@@ -1168,6 +1175,7 @@ sub parse
     
     # get grammar and closures
     my $grammar  = $self->{grammar};
+    
     my $closures = $self->{closures};
     
     $self->show_option('closures');
