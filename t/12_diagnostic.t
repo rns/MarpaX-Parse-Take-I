@@ -39,7 +39,8 @@ my $number_tokens = [
 
 # parse
 my $sexpr = $bnf->parse($number);
-unless (is $sexpr, 'expr(- num(digits(digit(1) digits(digit(2) digits(digit(3) digits(digit(4))))) . digits(digit(4) digits(digit(2) digits(digit(3))))))', "$number parsed"){
+
+unless (is $sexpr, '(expr - (num (digits (digit 1) (digits (digit 2) (digits (digit 3) (digits (digit 4))))) . (digits (digit 4) (digits (digit 2) (digits (digit 3))))))', "$number parsed"){
     say $sexpr;
 }
 

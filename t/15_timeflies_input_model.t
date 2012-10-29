@@ -102,10 +102,10 @@ my $sentence = 'time flies like an arrow, but fruit flies like a banana';
 # we know we want multiple parses
 my @trees = $mp->parse( tokenize($sentence) );
 
-my $expected = q{Sentence(Clause(Subject(noun(bare_noun(time))) Verb(flies) Object(adjective(like) noun(article(an) bare_noun(arrow)))) comma(,) conjunction(but) Clause(Subject(noun(bare_noun(fruit))) Verb(flies) Object(adjective(like) noun(article(a) bare_noun(banana)))))
-Sentence(Clause(Subject(adjective(time) noun(bare_noun(flies))) Verb(like) Object(noun(article(an) bare_noun(arrow)))) comma(,) conjunction(but) Clause(Subject(noun(bare_noun(fruit))) Verb(flies) Object(adjective(like) noun(article(a) bare_noun(banana)))))
-Sentence(Clause(Subject(noun(bare_noun(time))) Verb(flies) Object(adjective(like) noun(article(an) bare_noun(arrow)))) comma(,) conjunction(but) Clause(Subject(adjective(fruit) noun(bare_noun(flies))) Verb(like) Object(noun(article(a) bare_noun(banana)))))
-Sentence(Clause(Subject(adjective(time) noun(bare_noun(flies))) Verb(like) Object(noun(article(an) bare_noun(arrow)))) comma(,) conjunction(but) Clause(Subject(adjective(fruit) noun(bare_noun(flies))) Verb(like) Object(noun(article(a) bare_noun(banana)))))};
+my $expected = q{(Sentence (Clause (Subject (noun (bare_noun time))) (Verb flies) (Object (adjective like) (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (noun (bare_noun fruit))) (Verb flies) (Object (adjective like) (noun (article a) (bare_noun banana)))))
+(Sentence (Clause (Subject (adjective time) (noun (bare_noun flies))) (Verb like) (Object (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (noun (bare_noun fruit))) (Verb flies) (Object (adjective like) (noun (article a) (bare_noun banana)))))
+(Sentence (Clause (Subject (noun (bare_noun time))) (Verb flies) (Object (adjective like) (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (adjective fruit) (noun (bare_noun flies))) (Verb like) (Object (noun (article a) (bare_noun banana)))))
+(Sentence (Clause (Subject (adjective time) (noun (bare_noun flies))) (Verb like) (Object (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (adjective fruit) (noun (bare_noun flies))) (Verb like) (Object (noun (article a) (bare_noun banana)))))};
 
 is join("\n", map { $mp->show_parse_tree($_) } @trees), $expected, "'$sentence' parsed";
 

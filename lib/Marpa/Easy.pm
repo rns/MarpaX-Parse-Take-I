@@ -144,9 +144,13 @@ my $marpa_easy_options = {
     show_symbols => undef,
     show_terminals => undef,
     
-    # sequence or recursive
-    quantifier_rules => undef,
+    # stage: recognition by Marpa::R2 
+    show_recognition_failures => undef,
+    recognition_failure_sub => \&recognition_failure,
 
+    # transform quantified symbols into sequence (by default) or recursive rules
+    quantifier_rules => undef,
+    
 };
 
 my $bnf = 0; # indicates that BNF grammar scalar rather than rules aref was passed
@@ -284,7 +288,7 @@ sub get_option{
     my $self = shift;
 
     my $option = shift;
-    my $value = $self->{$option} or cluck "value of option '$option' undefined";
+    my $value = $self->{$option} || ''; #cluck "value of option '$option' undefined";
 
     # stringify the option value
     if (ref $value ~~ ["ARRAY", "HASH"]){
@@ -330,6 +334,10 @@ sub get_option{
         }
     } ## stringify the option value
 
+    # set empty value for undefined options
+    $value //= '';
+    
+    # remove newlines, if any
     chomp $value;
     
     return $value;
@@ -354,7 +362,7 @@ sub show_option{
 
     my $option = shift;
 
-    if ($self->{"show_$option"}){
+    if (exists $self->{"show_$option"}){
         my $comment = $self->comment_option($option);
         say join "\n", $comment, $self->get_option($option);
     }
@@ -380,7 +388,7 @@ sub show_literals               { $_[0]->get_option('literals') }
 
 sub show_lexer_regexes          { $_[0]->get_option('lexer_regexes') }
 
-sub show_recognition_failures   { Dump $_[0]->{recognition_failures} }
+sub show_recognition_failures   { $_[0]->get_option('recognition_failures') }
 
 # parse BNF to what will become Marpa::R2 rules after transformation 
 # (extraction of closures, adding rules for quantifiers, extraction of lexer rules, etc.)
@@ -868,7 +876,7 @@ sub sexpr { # s-expression
     # Throw away any undef's
     my @children = grep { defined } @_;
     
-    return "$lhs(" . join(' ', @children) . ")";
+    return "($lhs " . join(' ', @children) . ")";
 }
 
 sub tree { 
@@ -1093,15 +1101,36 @@ sub lex
     return $tokens;
 }
 
+# recognition failures are not necessarily fatal so by default, 
+# this sub will be called to get the most out of the recognizer and set that 
+# as recognition failure item under recognition_failures option
+# that can be further retrieved by show_recognition_failures
+# this default sub is here for demonstration only and cannot be considered as
+# any guide.
 sub recognition_failure {
-    my $self = shift;
-    my $token = shift;
     
-    my $rf = $self->{recognition_failures};
+    my $self = shift;
+
+    my $recognizer  = shift;
+    my $token_ix    = shift;
+    my $tokens      = shift;
+    
+    my $token = $tokens->[$token_ix];
+    
+    my $rf = $self->get_option('recognition_failures');
     
     push @$rf, { 
-        token => join ': ', @$token
+        token               => join ': ', @$token,
+        events              => $recognizer->events,
+        exhausted           => $recognizer->exhausted,
+        latest_earley_set   => $recognizer->latest_earley_set,
+        progress            => $recognizer->progress,
+        terminals_expected  => $recognizer->terminals_expected,
     };
+    
+    # fix things (that includes do nothing) and return true to continue parsing
+    # undef will lead to die()
+    return 1;
 }
 
 
@@ -1111,7 +1140,7 @@ sub parse
     my $input = shift;
     
     # init recognition failures
-    $self->{recognition_failures} = [];
+    $self->set_option('recognition_failures', []);
     
     $self->show_option('bnf_tokens');
     $self->show_option('bnf_rules');
@@ -1146,7 +1175,8 @@ sub parse
     } ) or die 'Failed to create recognizer';
     
     # read tokens
-    for my $token (@$tokens){
+    for my $i (0..@$tokens-1){
+        my $token = $tokens->[$i];
 #say "# reading: ", Dump $token;
         if (ref $token->[0] eq "ARRAY"){ # ambiguous tokens
             # use alternate/end_input
@@ -1164,9 +1194,11 @@ sub parse
             #   "full situational awareness"
             #   current token
             #   expected tokens
-            defined $recognizer->read( @$token ) or $self->recognition_failure($token);
+            defined $recognizer->read( @$token ) or $self->{recognition_failure_sub}->($recognizer, $i, $tokens) or die "Parse failed";
         }
     }
+    
+    $self->show_option('recognition_failures');
     
     # get values    
     my @values;
