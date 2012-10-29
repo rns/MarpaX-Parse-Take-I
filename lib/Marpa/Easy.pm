@@ -155,8 +155,6 @@ my $marpa_easy_options = {
     
 };
 
-my $bnf = 0; # indicates that BNF grammar scalar rather than rules aref was passed
-
 #
 # BNF parser needs to be package variable of Marpa::Easy
 # to prevent repeated transformation of its rules
@@ -202,6 +200,9 @@ sub build{
     # transform rules
     my @rules;
 
+    # indicate that BNF grammar scalar rather than rules aref was passed
+    my $bnf = 0;
+
     # array ref means we have rules
     if (ref $options->{rules} eq "ARRAY"){  
         @rules = @{ $options->{rules} };
@@ -239,7 +240,7 @@ sub build{
     my $grammar = Marpa::R2::Grammar->new($options);
     $grammar->precompute();
     
-    # save grammar
+    # save the grammar
     $self->{grammar} = $grammar;
     
     # set rules option
@@ -255,9 +256,6 @@ sub build{
     
     # extract and save lexer rules
     $self->set_option('lexer_rules', $self->_extract_lexer_rules( $options->{rules} ) );
-
-    # toggle BNF flag off, if it's on
-    $bnf = 0 if $bnf;
 }
 
 #
@@ -1237,4 +1235,5 @@ sub parse
     }
     
 }
+
 1;
