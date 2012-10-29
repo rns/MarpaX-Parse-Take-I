@@ -53,3 +53,24 @@ tree comparison.
 
 [15_timeflies_input_model.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t) -- getting part of speech data from WordNet::QueryData (which is a pre-req) and parsing 'time flies ...' sentence.
 
+Other pre-reqs:
+
+	Marpa::R2
+
+	Eval::Closure
+
+	Math::Combinatorics
+
+	Test::Differences
+
+	Test::Output
+
+	Tree::Simple::View
+
+	Tree::Simple::Visitor
+
+	Tree::Simple
+
+	WordNet::QueryData
+
+	XML::Twig
