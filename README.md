@@ -69,6 +69,6 @@ Other pre-reqs:
 		Tree::Simple
 		XML::Twig
 
-	optional, to run [15_timeflies_input_model.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t)
+	optional, to provide part of speech data for 15_timeflies_*.t files
 
 		WordNet::QueryData -- 
