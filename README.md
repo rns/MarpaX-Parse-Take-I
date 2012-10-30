@@ -55,21 +55,21 @@ tree comparison.
 
 Other pre-reqs:
 
-	core (closures in rules, terminal-based lexing, quantified symbols, textual BNF with actions, see test cases 02-07, 08 for details)
+core (closures in rules, terminal-based lexing, quantified symbols, textual BNF with actions, see test cases 02-07, 08 for details)
 
-		Marpa::R2
-		Clone
-		Eval::Closure
-		Math::Combinatorics
+	Marpa::R2
+	Clone
+	Eval::Closure
+	Math::Combinatorics
 
-	parse trees (set default_action to 'xml', 'tree', 'sexpr' or 'AoA' to have XML string, Tree::Simple, S-expression or array of arrays parse trees accordingly; use show_parse_tree("text" or "html") to view Tree::Simple parse trees as text or html, see test cases 10, 11 and 13 for details))
+parse trees (set default_action to 'xml', 'tree', 'sexpr' or 'AoA' to have XML string, Tree::Simple, S-expression or array of arrays parse trees accordingly; use show_parse_tree("text" or "html") to view Tree::Simple parse trees as text or html, see test cases 10, 11 and 13 for details))
 
-		Data::TreeDumper
-		Tree::Simple
-			Tree::Simple::Visitor
-			Tree::Simple::View
-		XML::Twig
+	Data::TreeDumper
+	Tree::Simple
+		Tree::Simple::Visitor
+		Tree::Simple::View
+	XML::Twig
 
-	optional, if you need to see how part-of-speech data are pulled from WordNet for text case 15 (‘time flies like an arrow, bit fruit flies like a banana’); if WordNet::QueryData is not installed, the pre-pulled data specified in the test script will be used.
+optional, if you need to see how part-of-speech data are pulled from WordNet for text case 15 (‘time flies like an arrow, bit fruit flies like a banana’); if WordNet::QueryData is not installed, the pre-pulled data specified in the test script will be used.
 
-		WordNet::QueryData
+	WordNet::QueryData
