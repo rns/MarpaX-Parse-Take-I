@@ -24,6 +24,7 @@ Ambiguous tokens can be defined by setting the input array item(s) to
 
 The test-to-feature mapping is given below.
 
+
 Transformation of the rules for Marpa::R2::Grammar and extract closures and lexer rules setting the basis for further parsing of BNF to Marpa::R2 rules:
 
 -	[`02_set_start_and_default_action.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/02_set_start_and_default_action.t),
@@ -31,21 +32,26 @@ Transformation of the rules for Marpa::R2::Grammar and extract closures and lexe
 -	[`04_lexing_on_terminal_literals.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/04_lexing_on_terminal_literals.t), and
 -	[`05_quantified_symbols_sequence.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/05_quantified_symbols_sequence.t)
 
+
 An example from the Parse::RecDescent tutorial, done the Marpa way:
 
 -	[`06_reversing_diff.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/06_reversing_diff.t)
+
 
 A BNF grammar with actions that can parse a possible signed decimal number, integer or float:
  
 -	[`07_decimal_number_bnf.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/07_decimal_number_bnf.t)
 
+
 A BNF grammar that can parse a BNF grammar that can parse a decimal number:
 
 -	[`08_bnf_in_bnf.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/08_bnf_in_bnf.t)
 
+
 An example from the Parse::RecDescent tutorial done in BNF with actions:
 
 -	[`09_reversing_diff_bnf.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/09_reversing_diff_bnf.t)
+
 
 Parse trees generation and traversal:
 
@@ -53,9 +59,12 @@ Parse trees generation and traversal:
 
 -	[`11_parse_tree_xml.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/11_parse_tree_xml.t)
 
+
 Comparison of parse tree traversal:
 
 -	[`13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t).
+
+
 
 Parsing ‘time flies like an arrow, bit fruit flies like a banana’ sentence getting part of speech data from WordNet::QueryData (if installed) or pre-set hash ref (otherwise).
 
