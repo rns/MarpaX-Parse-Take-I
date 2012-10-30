@@ -39,7 +39,7 @@ eval { $mp->parse($number) };
 like $@, qr/\Qalternative(): symbol "::any" does not exist\E/, "$number cannot be parsed without terminals";
 
 # add terminals
-$mp->add_rules($terminals);
+$mp->merge_token_rules($terminals);
 
 is $mp->parse($number), '(expr (minus -) (num (digits (digit 1) (digits (digit 2) (digits (digit 3) (digits (digit 4))))) (point .) (digits (digit 4) (digits (digit 2) (digits (digit 3))))))', "$number can be parsed with terminals added";
 

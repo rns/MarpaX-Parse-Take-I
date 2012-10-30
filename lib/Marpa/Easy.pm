@@ -269,37 +269,39 @@ sub _dump {
     my $var         = shift;
     my $stack_trace = shift || 0;
     
-    my $dump = DumpTree($var, "# $comment:",
-            DISPLAY_ADDRESS => 0,
-            DISPLAY_OBJECT_TYPE => 0,
-    );
+    my $dump = ref $var ? 
+        DumpTree( $var, "# $comment:", DISPLAY_ADDRESS => 0, DISPLAY_OBJECT_TYPE => 0 )
+        :
+        "# $comment:\n$var";
     
     $stack_trace ? cluck $dump : say $dump;
 }
 
 #
 # get current options (as-passed), get rules from them, merge new rules, 
-# make a new Marpa::Easy with the resulting options, replace $self with it
-# previous rules cannot be restored
+# and rebuild Marpa::Easy
 # 
-sub add_rules { 
+sub merge_token_rules { 
     
     my $self = shift;
 
-    my $rules_to_add = shift;
+    my $token_rules = shift;
 
     # get initial options
     my $options = $self->{options};
     
-    # $rules_to_add and $options->{rules} need to be both array refs or scalars (strings)
-    if (ref $rules_to_add eq "ARRAY" and ref $options->{rules} eq "ARRAY"){
-        push @{ $options->{rules} }, @$rules_to_add;
+    # $token_rules and $options->{rules} need to be both array refs or scalars (strings)
+    if (ref $token_rules eq "ARRAY" and ref $options->{rules} eq "ARRAY"){
+        # merge arrays
+        push @{ $options->{rules} }, @$token_rules;
+        
     }
-    elsif (ref $rules_to_add eq "" and ref $options->{rules} eq ""){
-        $options->{rules} .= $rules_to_add;
+    elsif (ref $token_rules eq "" and ref $options->{rules} eq ""){
+        # merge texts
+        $options->{rules} .= $token_rules;
     }
     
-    # rebuild this instance
+    # rebuild
     $self->build($options);
 }
 
@@ -317,22 +319,22 @@ sub set_option{
 }
 
 # stringify tokens as type[ type]: value
-sub token_string {
+sub _token_string {
 
     my $token = shift;
     
-    my $token_string;
+    my $_token_string;
     
     # ambigious token
     if (ref $token->[0] eq "ARRAY"){ 
-        $token_string = join(": ", join(' ', map { $_->[0] } @$token), $token->[0]->[1]);
+        $_token_string = join(": ", join(' ', map { $_->[0] } @$token), $token->[0]->[1]);
     }
     # unambigious token
     else{ 
-        $token_string = join (': ', @$token);
+        $_token_string = join (': ', @$token);
     }
     
-    return $token_string;
+    return $_token_string;
 }
 
 # return show_$option value or say show_$option's value if show_$option is set to true in the constructor
@@ -347,7 +349,7 @@ sub get_option{
     if (ref $value ~~ ["ARRAY", "HASH"]){
         # tokens
         if ($option eq 'tokens'){
-            $value = join "\n", map { token_string($_) } @$value;
+            $value = join "\n", map { _token_string($_) } @$value;
         }
         # rules
         elsif ($option eq 'rules'){
@@ -1187,29 +1189,60 @@ sub parse
         $self->show_option('symbols');
         $self->show_option('terminals');
         $self->show_option('literals');
-        # if tokens are ambiguous, generate and add rules for them before parsing
-        my @ambiguous_tokens = grep { ref $_->[0] eq "ARRAY" } @$tokens;
-        my @ambiguous_token_rules;
-        if ($self->{ambiguity} eq 'tokens' and @ambiguous_tokens){
-            # add rules
-            say "adding rules for ambiguous_tokens";
-            for my $ambiguous_token (@ambiguous_tokens){
-                # join $ambiguous_token
-                
-                # generate rules for the $ambiguous_token
-                
+        # find ambiguous tokens and disambiguate them by adding rules to the grammar
+        if ($self->{ambiguity} eq 'tokens'){
+#            say "adding rules for ambiguous_tokens";
+            # rules for the ambiguous token must be unique
+            my $ambiguous_token_rules = {};
+            my $rules_type = ref $self->{options}->{rules};
+            # enumerate tokens
+            for my $i (0..@$tokens-1){
+                my $token = $tokens->[$i];
+                # if $token is ambiguous, generate and add rules for it before recognizing
+                if (ref $token->[0] eq "ARRAY" ){
+                    my $ambiguous_token = $token;
+#                    _dump "ambiguous token", $ambiguous_token;
+                    # get $ambiguous_token types as an array and a string
+                    my @types = map { $_->[0] } @$ambiguous_token; 
+                    my $types = join('/', @types);
+                    # get $ambiguous_token value 
+                    my $value = $ambiguous_token->[0]->[1];
+                    # disambiguate $ambiguous_token (well, sort of)
+                    my $disambiguated_token = [ $types, $value ];
+                    # replace ambiguous token with disambiguated
+                    $tokens->[$i] = $disambiguated_token;
+                    # generate *unique* rules for the $ambiguous_token
+                    $ambiguous_token_rules->{$_}->{$types} = undef for @types;
+                }
             }
-        }
-        # add @ambiguous_token_rules (rebuild the grammar)
-        # see if initial rules are array or scalar and 
-        # set up @ambiguous_token_rules accordignly
-        
-    }
+#            _dump "disambiguated tokens", $tokens; 
+            # add %$ambiguous_token_rules as generated
+#            _dump "ambiguous token rules", $ambiguous_token_rules;
+            if ($rules_type eq "ARRAY"){
+                # lhs => [qw{rhs}]
+                my @rules = map { [ $_ => [ $ambiguous_token_rules->{$_} ] ] } keys %$ambiguous_token_rules;
+                $self->merge_token_rules(\@rules);
+            }
+            else{
+                # make a BNF grammar of @ambiguous_token_rules
+                my $bnf = "\n# rules added from ambiguous tokens\n";
+                # lhs ::= rhs
+                for my $lhs (keys %$ambiguous_token_rules){
+                    my @rhs = keys %{ $ambiguous_token_rules->{$lhs} };
+                    $bnf .= join "\n", map { $lhs . '::=' . $_ } @rhs;
+                    $bnf .= "\n";
+                }
+                $bnf .= "\n";
+                # add $bnf to $self->{options}->{$rules} and rebuild the grammar
+                $self->merge_token_rules($bnf);
+            }
+        } ## ($self->{ambiguity} eq 'tokens'
+    } ## if (ref $input eq "ARRAY"){
     # strings are split
     else{
         $tokens = $self->lex($input);
     }
-    
+
     $self->set_option('tokens', $tokens);
     $self->show_option('tokens');
     
@@ -1220,6 +1253,10 @@ sub parse
     
     $self->show_option('closures');
 
+#    say $self->get_option('tokens');
+#    say $self->get_option('rules');
+#    say $self->get_option('terminals');
+
     # setup recognizer
     my $recognizer = Marpa::R2::Recognizer->new( { 
         grammar => $grammar, 
@@ -1229,7 +1266,7 @@ sub parse
     # read tokens
     for my $i (0..@$tokens-1){
         my $token = $tokens->[$i];
-#_dump "reading", $token;
+#_dump "read()ing", _token_string($token);
         if (ref $token->[0] eq "ARRAY"){ # ambiguous tokens
             # use alternate/end_input
             for my $alternative (@$token) {

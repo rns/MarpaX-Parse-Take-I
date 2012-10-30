@@ -8,50 +8,53 @@ use YAML;
 
 use_ok 'Marpa::Easy';
 
+#
+# This test case is borrowed from Jeffrey Kegler's Marpa::R2 distribution 
+# https://github.com/jeffreykegler/Marpa--R2/blob/master/r2/t/timeflies.t
+# where are the necessary details are provided.
+#
 my $grammar = q{
     
-    Sentence ::= 
-          Clause
-        | Clause comma conjunction Clause
+    S    ::= C | C comma conjunction C
     
-    Clause  ::= Subject Verb Object Manner? # Place Time
-                                            # but we have no sentence for them (yet)
+    C      ::= NP VP
     
-    Subject ::= adjective? noun
-    Object  ::= adjective? noun
-    Manner  ::= adverb                      # adverb/adjunct of manner
+    V        ::= v
+    O      ::= NP
     
-    noun        ::= article? bare_noun
-    bare_noun   ::= n
-    article     ::= ia
-    adjective   ::= a
-    adverb      ::= r
-    Verb        ::= v
-    conjunction ::= conj
-    comma       ::= ,
+    NP          ::= article? adjective? noun
 
+    VP          ::= V O | V A
+    A     ::= PP                  
+    PP          ::= preposition NP
+    
+    adjective   ::= a
+    article     ::= ia
+    comma       ::= ,
+    conjunction ::= c
+    noun        ::= n
+    preposition ::= p
+    
 };
 
 # part-of-speech (pos) data 
-# if WordNet::QueryData is installed, we will pull them from it
 my $pos = {
 
-    a       => [qw{ ia n    }],     # indefinite articles
-    an      => [qw{ ia n    }],
+    a       => [qw{ ia       }],    # indefinite article
+    an      => [qw{ ia       }],
 
-    arrow   => [qw{ n       }],
-    banana  => [qw{ n       }],
-    but     => [qw{ conj r  }],     # but is a coordinating conjunction
-                                    # r stands for an adverb in WordNet
-    flies   => [qw{ n v     }],
-    fruit   => [qw{ a n v   }],     # nouns can be adjectives as they can modify other nouns 
-    time    => [qw{ a n v   }],  
+    arrow   => [qw{    a n   }],    
+    banana  => [qw{    a n   }],
+    but     => [qw{ c        }],    # conjunction
+    flies   => [qw{      n v }],    
+    fruit   => [qw{    a n v }],    # adjective noun verb
+    time    => [qw{    a n v }],    
 
-    like    => [qw{ a n v   }],     
+    like    => [qw{ p  a n v }],    # like is also a preposition
 
 };
 
-# check if we have something to pull pos from
+# check if we have WordNet::QueryData to pull pos from
 eval { require WordNet::QueryData };
 my $WordNet_QueryData_installed = $@;
 
@@ -72,8 +75,9 @@ sub tokenize {
         # pull lexem's part(s) of speech from WordNet if we have it installed
         # set empty otherwise
         my %pos = ref $wn eq 'WordNet::QueryData' ? 
-                  map { $_->[1] => undef } 
-                  map { [ split /#/ ] } $wn->validForms( $lexem ) : 
+                  map   { $_->[1] => undef } 
+                  grep  { $_ ne 'r' } # filter adverbs out
+                  map   { [ split /#/ ] } $wn->validForms( $lexem ) : 
                   ();
                   
         
@@ -100,35 +104,56 @@ sub tokenize {
     $tokens;
 }
 
+# input
 my $sentence = 'time flies like an arrow, but fruit flies like a banana';
 
-my $expected = q{(Sentence (Clause (Subject (noun (bare_noun time))) (Verb flies) (Object (adjective like) (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (noun (bare_noun fruit))) (Verb flies) (Object (adjective like) (noun (article a) (bare_noun banana)))))
-(Sentence (Clause (Subject (adjective time) (noun (bare_noun flies))) (Verb like) (Object (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (noun (bare_noun fruit))) (Verb flies) (Object (adjective like) (noun (article a) (bare_noun banana)))))
-(Sentence (Clause (Subject (noun (bare_noun time))) (Verb flies) (Object (adjective like) (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (adjective fruit) (noun (bare_noun flies))) (Verb like) (Object (noun (article a) (bare_noun banana)))))
-(Sentence (Clause (Subject (adjective time) (noun (bare_noun flies))) (Verb like) (Object (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (adjective fruit) (noun (bare_noun flies))) (Verb like) (Object (noun (article a) (bare_noun banana)))))};
-
-# set up the grammar
-my $mp = Marpa::Easy->new({
+#
+# set up the grammar handling ambiguity with input model
+#
+my $mp_input_model = Marpa::Easy->new({
     rules => $grammar,
-    default_action => 'sexpr', # s-expression, that's right
-# ===============================================================
-# handle ambiguity with Marpa::R2 input model that is the default, 
-# so the below line is here for information only
+    default_action => 'sexpr',
     ambiguity => 'input_model',
 });
 
-isa_ok $mp, 'Marpa::Easy';
+#
+# set up the grammar handling ambiguity with ambiguous tokens
+#
+my $mp_tokens = Marpa::Easy->new({
+    rules => $grammar,
+    default_action => 'sexpr',
+    ambiguity => 'tokens',
+});
 
-# we know we want multiple parses
-my @parses = $mp->parse( tokenize($sentence) );
+isa_ok $mp_input_model, 'Marpa::Easy';
 
-is join("\n", map { $mp->show_parse_tree($_) } @parses), $expected, "ambiguous '$sentence' parsed using input model (alternate()/earleme_complete())";
+# we know we want multiple parses, hence the array context of ->parse
+my @input_model_parses = $mp_input_model->parse( tokenize($sentence) );
+my @tokens_parses      = $mp_tokens->parse( tokenize($sentence) );
 
-# ==========================================
-# now handle ambiguity with ambiguous tokens
-$mp->set_option(ambiguity => 'tokens');
+# expected
+my $expected_input_model = <<EOT;
+(S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
+(S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
+(S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
+(S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
+EOT
 
-@parses = $mp->parse( tokenize($sentence) );
-is join("\n", map { $mp->show_parse_tree($_) } @parses), $expected, "ambiguous '$sentence' parsed using ambiguous tokens";
+my $expected_tokens = <<EOT;
+(S (C (NP (adjective (a time)) (noun (n flies))) (VP (V (v like)) (O (NP (article an) (noun (n arrow)))))) (comma ,) (conjunction but) (C (NP (adjective (a fruit)) (noun (n flies))) (VP (V (v like)) (O (NP (article a) (noun (n banana)))))))
+(S (C (NP (adjective (a time)) (noun (n flies))) (VP (V (v like)) (O (NP (article an) (noun (n arrow)))))) (comma ,) (conjunction but) (C (NP (noun (n fruit))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article a) (noun (n banana))))))))
+(S (C (NP (noun (n time))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article an) (noun (n arrow))))))) (comma ,) (conjunction but) (C (NP (adjective (a fruit)) (noun (n flies))) (VP (V (v like)) (O (NP (article a) (noun (n banana)))))))
+(S (C (NP (noun (n time))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article an) (noun (n arrow))))))) (comma ,) (conjunction but) (C (NP (noun (n fruit))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article a) (noun (n banana))))))))
+EOT
+
+# tests
+is  join("\n", map { $mp_input_model->show_parse_tree($_) } sort @input_model_parses) . "\n", 
+    $expected_input_model, 
+    "ambiguous sentence ‘$sentence’ parsed using alternate()/earleme_complete() input model";
+
+
+is  join("\n", map { $mp_tokens->show_parse_tree($_) } sort @tokens_parses) . "\n", 
+    $expected_tokens, 
+    "ambiguous sentence ‘$sentence’ parsed using ambiguous tokens";
 
 done_testing;
