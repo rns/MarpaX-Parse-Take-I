@@ -148,7 +148,7 @@ my $marpa_easy_options = {
     
     # stage: recognition by Marpa::R2 
     show_recognition_failures => undef,
-    recognition_failure_sub => \&recognition_failure,
+    recognition_failure_sub => undef,
 
     # transform quantified symbols into sequence (by default) or recursive rules
     quantifier_rules => undef,
@@ -197,8 +197,10 @@ sub build{
         }
     }
     # set defaults
-    $self->{quantifier_rules}   //= 'sequence';
-    $self->{ambiguity}          //= 'input_model';
+    $self->{quantifier_rules}        //= 'sequence';
+    $self->{ambiguity}               //= 'input_model';
+    $self->{recognition_failure_sub} //= \&recognition_failure;
+
     
     # transform rules
     my @rules;
@@ -261,9 +263,24 @@ sub build{
     $self->set_option('lexer_rules', $self->_extract_lexer_rules( $options->{rules} ) );
 }
 
+# print a variable with comment and stack trace
+sub _dump {
+    my $comment     = shift || "";
+    my $var         = shift;
+    my $stack_trace = shift || 0;
+    
+    my $dump = DumpTree($var, "# $comment:",
+            DISPLAY_ADDRESS => 0,
+            DISPLAY_OBJECT_TYPE => 0,
+    );
+    
+    $stack_trace ? cluck $dump : say $dump;
+}
+
 #
 # get current options (as-passed), get rules from them, merge new rules, 
 # make a new Marpa::Easy with the resulting options, replace $self with it
+# previous rules cannot be restored
 # 
 sub add_rules { 
     
@@ -299,6 +316,25 @@ sub set_option{
     $self->{"$option"} = $value;
 }
 
+# stringify tokens as type[ type]: value
+sub token_string {
+
+    my $token = shift;
+    
+    my $token_string;
+    
+    # ambigious token
+    if (ref $token->[0] eq "ARRAY"){ 
+        $token_string = join(": ", join(' ', map { $_->[0] } @$token), $token->[0]->[1]);
+    }
+    # unambigious token
+    else{ 
+        $token_string = join (': ', @$token);
+    }
+    
+    return $token_string;
+}
+
 # return show_$option value or say show_$option's value if show_$option is set to true in the constructor
 sub get_option{
 
@@ -309,21 +345,9 @@ sub get_option{
 
     # stringify the option value
     if (ref $value ~~ ["ARRAY", "HASH"]){
-#        say "# stringfying $option:\n", Dump $value;
         # tokens
         if ($option eq 'tokens'){
-            my $text = '';
-
-            for my $token (@$value){
-                if ($token->[0] eq "ARRAY"){ # ambigious tokens
-                    $text .= "\n" . join("\n", map { join ': ', @$_ } @$token) . "\n";
-                }
-                else{ # unambigious tokens
-                    $text .= join (': ', @$token) . "\n";
-                }
-            }
-
-            $value = $text; # set return value
+            $value = join "\n", map { token_string($_) } @$value;
         }
         # rules
         elsif ($option eq 'rules'){
@@ -1118,14 +1142,14 @@ sub lex
 sub recognition_failure {
     
     my $self = shift;
-
+    
     my $recognizer  = shift;
     my $token_ix    = shift;
     my $tokens      = shift;
     
     my $token = $tokens->[$token_ix];
     
-    my $rf = $self->get_option('recognition_failures');
+    my $rf = $self->{recognition_failures};
     
     push @$rf, { 
         token               => join ': ', @$token,
@@ -1162,9 +1186,22 @@ sub parse
         $self->show_option('terminals');
         $self->show_option('literals');
         # if tokens are ambiguous, generate and add rules for them before parsing
-        if ($self->{ambiguity} eq 'tokens' ){ # and tokens are and 
-
+        my @ambiguous_tokens = grep { ref $_->[0] eq "ARRAY" } @$tokens;
+        my @ambiguous_token_rules;
+        if ($self->{ambiguity} eq 'tokens' and @ambiguous_tokens){
+            # add rules
+            say "adding rules for ambiguous_tokens";
+            for my $ambiguous_token (@ambiguous_tokens){
+                # join $ambiguous_token
+                
+                # generate rules for the $ambiguous_token
+                
+            }
         }
+        # add @ambiguous_token_rules (rebuild the grammar)
+        # see if initial rules are array or scalar and 
+        # set up @ambiguous_token_rules accordignly
+        
     }
     else{
         $tokens = $self->lex($input);
@@ -1185,11 +1222,11 @@ sub parse
         grammar => $grammar, 
         closures => $closures,
     } ) or die 'Failed to create recognizer';
-    
+
     # read tokens
     for my $i (0..@$tokens-1){
         my $token = $tokens->[$i];
-#say "# reading: ", Dump $token;
+#_dump "reading", $token;
         if (ref $token->[0] eq "ARRAY"){ # ambiguous tokens
             # use alternate/end_input
             for my $alternative (@$token) {
@@ -1201,7 +1238,7 @@ sub parse
             # and rely on grammar to have disambiguation rules token1 => 'token1/token2/token3'
         }
         else{ # unambiguous token
-            defined $recognizer->read( @$token ) or $self->{recognition_failure_sub}->($recognizer, $i, $tokens) or die "Parse failed";
+            defined $recognizer->read( @$token ) or $self->{recognition_failure_sub}->($self, $recognizer, $i, $tokens) or die "Parse failed";
         }
     }
     
