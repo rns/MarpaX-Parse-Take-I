@@ -53,7 +53,7 @@ my $pos = {
 
 # check if we have something to pull pos from
 eval { require WordNet::QueryData };
-my $WordNet_QueryData_installed = not $@;
+my $WordNet_QueryData_installed = $@;
 
 # split sentence into [ part_of_speech, word ] tokens
 sub tokenize {
