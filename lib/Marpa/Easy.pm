@@ -1177,10 +1177,12 @@ sub parse
     $self->show_option('bnf_tokens');
     $self->show_option('bnf_rules');
 
-    # input can be token/value pair arrayref or a string
+    # input can be type/value pair arrayref or a string
+    # type/value pair arrayrefs are used as is
     my $tokens;
     if (ref $input eq "ARRAY"){
         $tokens = $input;
+        # show options if set
         $self->show_option('rules');
         $self->show_option('symbols');
         $self->show_option('terminals');
@@ -1203,6 +1205,7 @@ sub parse
         # set up @ambiguous_token_rules accordignly
         
     }
+    # strings are split
     else{
         $tokens = $self->lex($input);
     }
