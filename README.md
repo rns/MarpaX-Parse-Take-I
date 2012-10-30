@@ -4,22 +4,33 @@ Marpa-Easy-proof-of-concept
 This module is an attempt at providing an easy-to-use interface 
 to Marpa::R2.
 
-"Easy-to-use" currently means that a user can set the 'rules' argument 
-of Marpa::R2::Grammar to a string containing a BNF grammar (which
-may define actions in %{ %} tags), whose literals will be extracted and 
-used to lex the input, call parse method on the input and receive 
-the value produced by Marpa::R2 evaluator or a parse tree (Tree::Simple, 
-XML string, S-expression string, array of arrays, hash of arrays) 
-by setting the default_action to 'tree', 'xml', 'sexpr', 'AoA', 
-'HoA', accordingly. 
+"Easy-to-use" currently means that a user can:
 
-The input can be a string or a reference to an array of [ $type, $value ] refs. 
+-	call `parse` method on the input and receive the value produced by Marpa::R2 evaluator or a  by 
+
+-	use closures (`sub { ... }`) in Marpa::R2::Grammar rules,
+
+-	omit default_action and have it set to `'AoA'` to have the rules evaluated to arrays of arrays automagically,
+
+-	have the lhs of the first rule passed to Marpa::R2::Grammar set as its start symbol, if no start symbol is set in Marpa::R2::Grammar constructor,
+
+-	set the `'rules'` argument of Marpa::R2::Grammar to a string containing a BNF grammar (which may define actions in `%{ %}` tags), 
+
+-	have literals extracted and used to lex the input into tokens that will go to the recognizer, 
+
+-	set default_action to `'tree'`, `'xml'`, `'sexpr'`, `'AoA'`, and `'HoA'`, to have `parse` return a parse tree (Tree::Simple, XML string, S-expression string, array of arrays, and hash of arrays, accordingly), 
+
+-	call `show_parse_tree($format)` to view the parse tree as text dump, HTML or formatted XML;
+
+-	use Tree::Simple::traverse, Tree::Simple::Visitor or XML::Twig to traverse the relevant parse trees and gain results.
+
+The input can be a string or a reference to an array of `[ $type, $value ]` refs. 
 
 Ambiguous tokens can be defined by setting the input array item(s) to 
-[ [ $type1, $value ],  [ $type2, $value ] ] and will be handled with 
-alternate()/earleme_complete().
+`[ [ $type1, $value ],  [ $type2, $value ] ] ...` and will be handled with 
+`alternate()/earleme_complete()` input model.
 
-Below are some of the test cases with brief descriptions.
+The test-to-feature mapping is given below.
 
 [01_with_marpa_recognizer.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/01_with_marpa_recognizer.t) -- Marpa::Easy can be used with Marpa::R2::Recognizer
 
