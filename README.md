@@ -24,51 +24,45 @@ Ambiguous tokens can be defined by setting the input array item(s) to
 
 The test-to-feature mapping is given below.
 
-Transformation of the rules for Marpa::R2::Grammar and extract closures and lexer rules
----------------------------------------------------------------------------------------
+**Transformation of the rules for Marpa::R2::Grammar and extract closures and lexer rules**
 
 -	[`02_set_start_and_default_action.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/02_set_start_and_default_action.t),
 -	[`03_closures_in_rules.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/03_closures_in_rules.t),
 -	[`04_lexing_on_terminal_literals.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/04_lexing_on_terminal_literals.t), and
 -	[`05_quantified_symbols_sequence.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/05_quantified_symbols_sequence.t)
 
-An example from the Parse::RecDescent tutorial, done the Marpa way
-------------------------------------------------------------------
+**An example from the Parse::RecDescent tutorial, done the Marpa way**
 
 -	[`06_reversing_diff.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/06_reversing_diff.t)
 
-A BNF grammar with actions that can parse a possible signed decimal number
---------------------------------------------------------------------------
+**A BNF grammar with actions that can parse a possible signed decimal number**
 
 -	[`07_decimal_number_bnf.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/07_decimal_number_bnf.t)
 
-A BNF grammar that can parse a BNF grammar that can parse a decimal number
----------------------------------------------------------------------------
+**A BNF grammar that can parse a BNF grammar that can parse a decimal number**
 
 -	[`08_bnf_in_bnf.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/08_bnf_in_bnf.t)
 
-An example from the Parse::RecDescent tutorial done in BNF with actions
------------------------------------------------------------------------
+**An example from the Parse::RecDescent tutorial done in BNF with actions**
 
 -	[`09_reversing_diff_bnf.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/09_reversing_diff_bnf.t)
 
-Parse trees generation and traversal
-------------------------------------
+**Parse trees generation and traversal**
 
 -	[`10_parse_tree_simple.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/10_parse_tree_simple.t)
 
 -	[`11_parse_tree_xml.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/11_parse_tree_xml.t)
 
-Comparison of parse tree traversal
-----------------------------------
+**Comparison of parse tree traversal**
 
 -	[`13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t).
 
-Parsing ‘time flies like an arrow, bit fruit flies like a banana’ sentence getting part of speech data from WordNet::QueryData (if installed) or pre-set hash ref (otherwise).
+**Parsing ‘time flies like an arrow, bit fruit flies like a banana’ sentence getting part of speech data from WordNet::QueryData (if installed) or pre-set hash ref (otherwise)**
 
 -	[`15_timeflies_input_model.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t)
 
 Pre-requisites:
+---------------
 
 **Core** (closures in rules, terminal-based lexing, quantified symbols, textual BNF with actions, see test cases 02-07, 08 for details)
 
