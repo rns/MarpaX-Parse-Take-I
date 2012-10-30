@@ -13,6 +13,14 @@ use_ok 'Marpa::Easy';
 # https://github.com/jeffreykegler/Marpa--R2/blob/master/r2/t/timeflies.t
 # where are the necessary details are provided.
 #
+
+#
+# We are parsing the sentence using 2 methods: one is input model (IM) that implies 
+# using alternate()/earleme_complete() when ambiguous tokens are seen
+# and the other is ambiguous tokens (AT) that joins ambiguous tokens types 
+# into a single token and adds token rules like [ type1 => ['type1/type2/type3'] ]
+# to the grammar. The test case cited uses both methods in a single grammar.
+#
 my $grammar = q{
     
     S    ::= C | C comma conjunction C
@@ -110,7 +118,7 @@ my $sentence = 'time flies like an arrow, but fruit flies like a banana';
 #
 # set up the grammar handling ambiguity with input model
 #
-my $mp_input_model = Marpa::Easy->new({
+my $mp_IM = Marpa::Easy->new({
     rules => $grammar,
     default_action => 'sexpr',
     ambiguity => 'input_model',
@@ -119,27 +127,27 @@ my $mp_input_model = Marpa::Easy->new({
 #
 # set up the grammar handling ambiguity with ambiguous tokens
 #
-my $mp_tokens = Marpa::Easy->new({
+my $mp_AT = Marpa::Easy->new({
     rules => $grammar,
     default_action => 'sexpr',
     ambiguity => 'tokens',
 });
 
-isa_ok $mp_input_model, 'Marpa::Easy';
+isa_ok $mp_IM, 'Marpa::Easy';
 
 # we know we want multiple parses, hence the array context of ->parse
-my @input_model_parses = $mp_input_model->parse( tokenize($sentence) );
-my @tokens_parses      = $mp_tokens->parse( tokenize($sentence) );
+my @input_model_parses = $mp_IM->parse( tokenize($sentence) );
+my @tokens_parses      = $mp_AT->parse( tokenize($sentence) );
 
 # expected
-my $expected_input_model = <<EOT;
+my $expected_IM = <<EOT;
 (S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
 (S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
 (S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
 (S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
 EOT
 
-my $expected_tokens = <<EOT;
+my $expected_AT = <<EOT;
 (S (C (NP (adjective (a time)) (noun (n flies))) (VP (V (v like)) (O (NP (article an) (noun (n arrow)))))) (comma ,) (conjunction but) (C (NP (adjective (a fruit)) (noun (n flies))) (VP (V (v like)) (O (NP (article a) (noun (n banana)))))))
 (S (C (NP (adjective (a time)) (noun (n flies))) (VP (V (v like)) (O (NP (article an) (noun (n arrow)))))) (comma ,) (conjunction but) (C (NP (noun (n fruit))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article a) (noun (n banana))))))))
 (S (C (NP (noun (n time))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article an) (noun (n arrow))))))) (comma ,) (conjunction but) (C (NP (adjective (a fruit)) (noun (n flies))) (VP (V (v like)) (O (NP (article a) (noun (n banana)))))))
@@ -147,13 +155,13 @@ my $expected_tokens = <<EOT;
 EOT
 
 # tests
-is  join("\n", map { $mp_input_model->show_parse_tree($_) } sort @input_model_parses) . "\n", 
-    $expected_input_model, 
+is  join("\n", map { $mp_IM->show_parse_tree($_) } sort @input_model_parses) . "\n", 
+    $expected_IM, 
     "ambiguous sentence ‘$sentence’ parsed using alternate()/earleme_complete() input model";
 
 
-is  join("\n", map { $mp_tokens->show_parse_tree($_) } sort @tokens_parses) . "\n", 
-    $expected_tokens, 
+is  join("\n", map { $mp_AT->show_parse_tree($_) } sort @tokens_parses) . "\n", 
+    $expected_AT, 
     "ambiguous sentence ‘$sentence’ parsed using ambiguous tokens";
 
 done_testing;
