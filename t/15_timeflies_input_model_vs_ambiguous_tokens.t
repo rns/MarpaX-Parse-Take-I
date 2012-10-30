@@ -10,8 +10,8 @@ use_ok 'Marpa::Easy';
 
 #
 # This test case is borrowed from Jeffrey Kegler's Marpa::R2 distribution 
-# https://github.com/jeffreykegler/Marpa--R2/blob/master/r2/t/timeflies.t
-# where are the necessary details are provided.
+# (https://github.com/jeffreykegler/Marpa--R2/blob/master/r2/t/timeflies.t)
+# where the necessary details are provided.
 #
 
 #

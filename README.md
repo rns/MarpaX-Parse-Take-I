@@ -63,7 +63,7 @@ Feature => Test(s)
 
 **Parsing ‘time flies like an arrow, bit fruit flies like a banana’ sentence getting part of speech data from WordNet::QueryData (if installed) or pre-set hash ref (otherwise)**
 
--	[`15_timeflies_input_model.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t)
+-	[`15_timeflies_input_model_vs_ambiguous_tokens.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model_vs_ambiguous_tokens.t)
 
 Pre-requisites:
 ---------------
@@ -82,7 +82,3 @@ Pre-requisites:
 		Tree::Simple::Visitor
 		Tree::Simple::View
 	XML::Twig
-
-_Optional_, if you need to see how part-of-speech data are pulled from WordNet for text case 15 (‘time flies like an arrow, bit fruit flies like a banana’); if WordNet::QueryData is not installed, the pre-pulled data specified in the test script will be used.
-
-	WordNet::QueryData
