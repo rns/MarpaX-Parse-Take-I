@@ -32,29 +32,30 @@ my $grammar = q{
 
 };
 
-my $mp = Marpa::Easy->new({
-    rules => $grammar,
-    default_action => 'sexpr', # s-expression, that's right
-});
+# part-of-speech (pos) data 
+# if WordNet::QueryData is installed, we wull pull them from it
+my $pos = {
 
-isa_ok $mp, 'Marpa::Easy';
+    a       => [qw{ ia n    }],     # indefinite articles
+    an      => [qw{ ia n    }],
 
-# these part-of-speech (pos) data will be added to those provided by WordNet
-my $lex = {
-    a   => [ 'ia' ],        # indefinite articles
-    an  => [ 'ia' ],
-    but => [ 'conj' ],      # but is a coordinating conjunction in addition to
-                            # WordNet's adverb
-    time  => [ 'a' ],       # nouns can be adjectives as they can modify other nouns 
-    fruit => [ 'a' ],       # which WordNet seems to be sadly knowing nothing about
-                            
+    arrow   => [qw{ n       }],
+    banana  => [qw{ n       }],
+    but     => [qw{ conj r  }],     # but is a coordinating conjunction
+                                    # r stands for an adverb in WordNet
+    flies   => [qw{ n v     }],
+    fruit   => [qw{ a n v   }],     # nouns can be adjectives as they can modify other nouns 
+    time    => [qw{ a n v   }],  
+
+    like    => [qw{ a n v   }],     
+
 };
 
-SKIP: {
-
+# check if we have something to pull pos from
 eval { require WordNet::QueryData };
-skip "WordNet::QueryData not installed", 1 if $@;
+my $WordNet_QueryData_installed = not $@;
 
+# split sentence into [ part_of_speech, word ] tokens
 sub tokenize {
 
     my $text   = shift;
@@ -63,17 +64,25 @@ sub tokenize {
     
     my $tokens = [];
     
-    my $wn     = WordNet::QueryData->new( noload => 1 );
+    my $wn     = $WordNet_QueryData_installed ? WordNet::QueryData->new( noload => 1 ) : undef;
     
     # set up [ pos, word ] tokens
     for my $lexem (@lexems){
-        
-        # pull part-of-speech data from WordNet 
-        my @pos = keys { map { $_->[1] => undef } map { [ split /#/ ] } $wn->validForms( $lexem ) };
-        
-        # pull more part-of-speech data from $lex, if any
-        push @pos, @{ $lex->{$lexem} || [] };
 
+        # pull lexem's part(s) of speech from WordNet if we have it installed
+        # set empty otherwise
+        my %pos = ref $wn eq 'WordNet::QueryData' ? 
+                  map { $_->[1] => undef } 
+                  map { [ split /#/ ] } $wn->validForms( $lexem ) : 
+                  ();
+                  
+        
+        # add only missing part-of-speech data from $pos
+        map { $pos{$_} = undef } @{ $pos->{$lexem} || [] };
+        
+        # set up part of speech data as an array
+        my @pos = keys %pos;
+        
         # ambiguous token
         if (@pos > 1){      
             push @$tokens, [ map { [ $_, $lexem ] } @pos ] ;
@@ -93,16 +102,33 @@ sub tokenize {
 
 my $sentence = 'time flies like an arrow, but fruit flies like a banana';
 
-# we know we want multiple parses
-my @parses = $mp->parse( tokenize($sentence) );
-
 my $expected = q{(Sentence (Clause (Subject (noun (bare_noun time))) (Verb flies) (Object (adjective like) (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (noun (bare_noun fruit))) (Verb flies) (Object (adjective like) (noun (article a) (bare_noun banana)))))
 (Sentence (Clause (Subject (adjective time) (noun (bare_noun flies))) (Verb like) (Object (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (noun (bare_noun fruit))) (Verb flies) (Object (adjective like) (noun (article a) (bare_noun banana)))))
 (Sentence (Clause (Subject (noun (bare_noun time))) (Verb flies) (Object (adjective like) (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (adjective fruit) (noun (bare_noun flies))) (Verb like) (Object (noun (article a) (bare_noun banana)))))
 (Sentence (Clause (Subject (adjective time) (noun (bare_noun flies))) (Verb like) (Object (noun (article an) (bare_noun arrow)))) (comma ,) (conjunction but) (Clause (Subject (adjective fruit) (noun (bare_noun flies))) (Verb like) (Object (noun (article a) (bare_noun banana)))))};
 
-is join("\n", map { $mp->show_parse_tree($_) } @parses), $expected, "'$sentence' parsed";
+# set up the grammar
+my $mp = Marpa::Easy->new({
+    rules => $grammar,
+    default_action => 'sexpr', # s-expression, that's right
+# ===============================================================
+# handle ambiguity with Marpa::R2 input model that is the default, 
+# so the below line is here for information only
+    ambiguity => 'input_model',
+});
 
-} ## SKIP
+isa_ok $mp, 'Marpa::Easy';
+
+# we know we want multiple parses
+my @parses = $mp->parse( tokenize($sentence) );
+
+is join("\n", map { $mp->show_parse_tree($_) } @parses), $expected, "ambiguous '$sentence' parsed using input model (alternate()/earleme_complete())";
+
+# ==========================================
+# now handle ambiguity with ambiguous tokens
+$mp->set_option(ambiguity => 'tokens');
+
+@parses = $mp->parse( tokenize($sentence) );
+is join("\n", map { $mp->show_parse_tree($_) } @parses), $expected, "ambiguous '$sentence' parsed using ambiguous tokens";
 
 done_testing;
