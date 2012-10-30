@@ -1,6 +1,9 @@
 Marpa-Easy-proof-of-concept
 ===========================
 
+What It Is
+----------
+
 This module is an attempt at providing an easy-to-use interface 
 to Marpa::R2.
 
