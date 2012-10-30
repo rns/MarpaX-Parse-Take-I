@@ -51,24 +51,25 @@ tutorial done in BNF with actions.
 [13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t) -- Parse 
 tree comparison.
 
-[15_timeflies_input_model.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t) -- getting part of speech data from WordNet::QueryData (which is a pre-req) and parsing 'time flies ...' sentence.
+[15_timeflies_input_model.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/15_timeflies_input_model.t) -- getting part of speech data from WordNet::QueryData (which is a pre-req) and parsing ‘time flies like an arrow...’ sentence.
 
 Other pre-reqs:
 
-	core
+	core (closures in rules, terminal-based lexing, quantified symbols, textual BNF with actions, see test cases 02-07, 08 for details)
 
 		Marpa::R2
 		Clone
 		Eval::Closure
 		Math::Combinatorics
 
-	parse trees
+	parse trees (set default_action to 'xml', 'tree', 'sexpr' or 'AoA' to have XML string, Tree::Simple, S-expression or array of arrays parse trees accordingly; use show_parse_tree("text" or "html") to view Tree::Simple parse trees as text or html, see test cases 10, 11 and 13 for details))
 
-		Tree::Simple::View
-		Tree::Simple::Visitor
+		Data::TreeDumper
 		Tree::Simple
+			Tree::Simple::Visitor
+			Tree::Simple::View
 		XML::Twig
 
-	optional, to provide part of speech data for 15_timeflies_*.t files
+	optional, if you need to see how part-of-speech data are pulled from WordNet for text case 15 (‘time flies like an arrow, bit fruit flies like a banana’); if WordNet::QueryData is not installed, the pre-pulled data specified in the test script will be used.
 
 		WordNet::QueryData
