@@ -33,7 +33,7 @@ my $grammar = q{
 };
 
 # part-of-speech (pos) data 
-# if WordNet::QueryData is installed, we wull pull them from it
+# if WordNet::QueryData is installed, we will pull them from it
 my $pos = {
 
     a       => [qw{ ia n    }],     # indefinite articles
