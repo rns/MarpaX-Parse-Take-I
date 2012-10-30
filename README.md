@@ -71,4 +71,4 @@ Other pre-reqs:
 
 	optional, to provide part of speech data for 15_timeflies_*.t files
 
-		WordNet::QueryData -- 
+		WordNet::QueryData
