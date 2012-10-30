@@ -25,8 +25,8 @@ Ambiguous tokens can be defined by setting the input array item(s) to
 `[ [ $type1, $value ],  [ $type2, $value ] ] ...` and will be handled with 
 `alternate()/earleme_complete()` input model.
 
-The test-to-feature mapping is given below
-------------------------------------------
+Feature => Test(s)
+------------------
 
 **Transformation of the rules for Marpa::R2::Grammar and extract closures and lexer rules**
 
