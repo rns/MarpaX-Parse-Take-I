@@ -75,7 +75,7 @@ Pre-requisites:
 	Eval::Closure
 	Math::Combinatorics
 
-**Parse Trees** (set default_action to 'xml', 'tree', 'sexpr' or 'AoA' to have XML string, Tree::Simple, S-expression or array of arrays parse trees accordingly; use show_parse_tree("text" or "html") to view Tree::Simple parse trees as text or html, see test cases 10, 11 and 13 for details))
+**Parse Trees** (set default_action to `'xml'`, `'tree'`, `'sexpr'` or `'AoA'` to have XML string, Tree::Simple, S-expression or array of arrays parse trees accordingly; use show_parse_tree("text" or "html") to view Tree::Simple parse trees as text or html, see test cases 10, 11 and 13 for details))
 
 	Data::TreeDumper
 	Tree::Simple
