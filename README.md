@@ -32,7 +32,7 @@ Ambiguous tokens can be defined by setting the input array item(s) to
 
 The test-to-feature mapping is given below.
 
-[01_with_marpa_recognizer.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/01_with_marpa_recognizer.t) -- Marpa::Easy can be used with Marpa::R2::Recognizer
+[`01_with_marpa_recognizer.t`](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/01_with_marpa_recognizer.t)` -- Marpa::Easy can be used with Marpa::R2::Recognizer
 
 [02_set_start_and_default_action.t](https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/02_set_start_and_default_action.t)
 
