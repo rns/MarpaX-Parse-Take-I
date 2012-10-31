@@ -1009,7 +1009,7 @@ sub show_parse_tree{
     if (ref $tree eq "ARRAY"){
         my $trees = '';
         for my $i (0..@$tree-1){
-            $trees .= "# Parse Tree @{[$i+1]}:\n" . $self->show_parse_tree($tree->[$i], $format);
+            $trees .= "# Parse Tree @{[$i+1]}:\n" . $self->show_parse_tree($tree->[$i], $format) . "\n";
         }
         return $trees;
     }
@@ -1197,6 +1197,7 @@ sub parse
 {
     my $self = shift;
     my $input = shift;
+    # TODO: get %$features, split $input, set up $tokens
     
     # init recognition failures
     $self->set_option('recognition_failures', []);
