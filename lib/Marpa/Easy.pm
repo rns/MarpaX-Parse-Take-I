@@ -201,6 +201,21 @@ sub build{
     $self->{ambiguity}               //= 'input_model';
     $self->{recognition_failure_sub} //= \&recognition_failure;
 
+    # TODO: extract recognizer options
+    my @recognizer_options = qw{
+        closures
+        end
+        event_if_expected
+        max_parses
+        ranking_method
+        too_many_earley_items
+        trace_actions
+        trace_file_handle
+        trace_terminals
+        trace_values
+        warnings
+    };
+    
     # transform rules
     my @rules;
 
