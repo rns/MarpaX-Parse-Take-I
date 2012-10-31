@@ -201,7 +201,6 @@ sub build{
     $self->{ambiguity}               //= 'input_model';
     $self->{recognition_failure_sub} //= \&recognition_failure;
 
-    
     # transform rules
     my @rules;
 
@@ -216,6 +215,7 @@ sub build{
     else {
         $bnf = 1;
         my $rules = $self->_bnf_to_rules( $options->{rules} );
+        # TODO: catch BNF parsing errors
         @rules = @$rules;
         $self->set_option('parsed_bnf_rules', \@rules);
     }
@@ -990,45 +990,55 @@ sub show_parse_tree{
     my $tree = shift || $self->{parse_tree};
     my $format = shift || 'text';
     
-    # tree proper
-    if (ref $tree eq "Tree::Simple"){
-        given ($format){
-            when ("text"){
-                return DumpTree( 
-                        $tree, $tree->getNodeValue,
-                        DISPLAY_ADDRESS => 0,
-                        DISPLAY_OBJECT_TYPE => 0,
-                        FILTER => \&filter
-                    );
-            }
-            when ("html"){
-                my $tree_view = Tree::Simple::View::HTML->new($tree);    
-                return $tree_view->expandAll();
-            }
-            when ("dhtml"){
-                my $tree_view = Tree::Simple::View::DHTML->new($tree);    
-                return 
-                      $tree_view->javascript()
-                    . $tree_view->expandAll();
+    # handle multiple parses
+    if (ref $tree eq "ARRAY"){
+        my $trees = '';
+        for my $i (0..@$tree-1){
+            $trees .= "# Parse Tree @{[$i+1]}:\n" . $self->show_parse_tree($tree->[$i], $format);
+        }
+        return $trees;
+    }
+    else{
+        # tree proper
+        if (ref $tree eq "Tree::Simple"){
+            given ($format){
+                when ("text"){
+                    return DumpTree( 
+                            $tree, $tree->getNodeValue,
+                            DISPLAY_ADDRESS => 0,
+                            DISPLAY_OBJECT_TYPE => 0,
+                            FILTER => \&filter
+                        );
+                }
+                when ("html"){
+                    my $tree_view = Tree::Simple::View::HTML->new($tree);    
+                    return $tree_view->expandAll();
+                }
+                when ("dhtml"){
+                    my $tree_view = Tree::Simple::View::DHTML->new($tree);    
+                    return 
+                          $tree_view->javascript()
+                        . $tree_view->expandAll();
+                }
             }
         }
-    }
-    # data structure
-    elsif (ref $tree ~~ [ "ARRAY", "HASH" ] ){
-        return DumpTree($tree, "tree",
-            DISPLAY_ADDRESS => 0,
-            DISPLAY_OBJECT_TYPE => 0,
-        )
-    }
-    # utf8 string, must be XML
-    elsif (is_utf8($tree) and index ($tree, "<\?xml/") >= 0) {
-        my $t = XML::Twig->new(pretty_print => 'indented');
-        $t->parse($tree);
-        return $t->sprint;
-    }
-    # mere scalar
-    else{
-        return $tree;
+        # data structure
+        elsif (ref $tree ~~ [ "ARRAY", "HASH" ] ){
+            return DumpTree($tree, "tree",
+                DISPLAY_ADDRESS => 0,
+                DISPLAY_OBJECT_TYPE => 0,
+            )
+        }
+        # utf8 string, must be XML
+        elsif (is_utf8($tree) and index ($tree, "<\?xml/") >= 0) {
+            my $t = XML::Twig->new(pretty_print => 'indented');
+            $t->parse($tree);
+            return $t->sprint;
+        }
+        # mere scalar
+        else{
+            return $tree;
+        }
     }
 }
 
@@ -1094,7 +1104,7 @@ sub lex
         my $matches = {};
         for my $re (keys %$lex_re){
             if ($input =~ /^($re)/){
-#say "match: $re -> '$&'";
+#say "match: $re -> '$1'";
                 $matches->{$1}->{$lex_re->{$re}} = undef;
             }
         }
@@ -1261,25 +1271,25 @@ sub parse
     my $recognizer = Marpa::R2::Recognizer->new( { 
         grammar => $grammar, 
         closures => $closures,
+#        trace_terminals => 3,
     } ) or die 'Failed to create recognizer';
 
     # read tokens
     for my $i (0..@$tokens-1){
         my $token = $tokens->[$i];
-#_dump "read()ing", _token_string($token);
-        if (ref $token->[0] eq "ARRAY"){ # ambiguous tokens
+#_dump "read()ing", $token;
+        if (ref $token->[0] eq "ARRAY"){ # ambiguous token
             # use alternate/end_input
             for my $alternative (@$token) {
                 my ($type, $value) = @$alternative;
                 $recognizer->alternative( $type, \$value, 1 )
             }
             $recognizer->earleme_complete();
-            # TODO: join tokens with '/' do token1/token2/token3 and read that ambiguous tokens to the grammar
-            # and rely on grammar to have disambiguation rules token1 => 'token1/token2/token3'
         }
         else{ # unambiguous token
             defined $recognizer->read( @$token ) or $self->{recognition_failure_sub}->($self, $recognizer, $i, $tokens) or die "Parse failed";
         }
+#        say "# progress:", $recognizer->show_progress;
     }
     
     $self->show_option('recognition_failures');
