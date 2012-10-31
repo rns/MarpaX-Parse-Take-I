@@ -67,7 +67,7 @@ parsing of input
         scalar input is lexed by 
             pre-lexing
                 - extrating literals from the grammar
-                - setting them up as regex => token type hash
+                - setting them up as regex => token name hash
             lexing
                 - matching input and consuming the longest match
         tokens    
@@ -333,7 +333,7 @@ sub set_option{
     $self->{"$option"} = $value;
 }
 
-# stringify tokens as type[ type]: value
+# stringify tokens as name[ name]: value
 sub _token_string {
 
     my $token = shift;
@@ -1132,14 +1132,14 @@ sub lex
         # get longest match(es)
         my $max_len = length $matches[0];
         my @max_len_tokens = grep { length $_ eq $max_len } @matches;
-        # set [ token_type, token_value ] pairs
+        # set [ token_name, token_value ] pairs
         my @matched_tokens;
-        # get token types of token values
+        # get token names of token values
         for my $token_value (@max_len_tokens){
-            my @token_types = keys %{ $matches->{$token_value} };
-            for my $token_type (@token_types){
-    #            say "$token_type, $token_value";
-                push @matched_tokens, [ $token_type, $token_value ];
+            my @token_names = keys %{ $matches->{$token_value} };
+            for my $token_name (@token_names){
+    #            say "$token_name, $token_value";
+                push @matched_tokens, [ $token_name, $token_value ];
             }
         }
         if (@matched_tokens > 1){ # ambigious tokens
@@ -1204,8 +1204,8 @@ sub parse
     $self->show_option('bnf_tokens');
     $self->show_option('bnf_rules');
 
-    # input can be type/value pair arrayref or a string
-    # type/value pair arrayrefs are used as is
+    # input can be name/value pair arrayref or a string
+    # name/value pair arrayrefs are used as is
     my $tokens;
     if (ref $input eq "ARRAY"){
         $tokens = $input;
@@ -1219,7 +1219,7 @@ sub parse
 #            say "adding rules for ambiguous_tokens";
             # rules for the ambiguous token must be unique
             my $ambiguous_token_rules = {};
-            my $rules_type = ref $self->{options}->{rules};
+            my $rules_name = ref $self->{options}->{rules};
             # enumerate tokens
             for my $i (0..@$tokens-1){
                 my $token = $tokens->[$i];
@@ -1227,23 +1227,23 @@ sub parse
                 if (ref $token->[0] eq "ARRAY" ){
                     my $ambiguous_token = $token;
 #                    _dump "ambiguous token", $ambiguous_token;
-                    # get $ambiguous_token types as an array and a string
-                    my @types = map { $_->[0] } @$ambiguous_token; 
-                    my $types = join('/', @types);
+                    # get $ambiguous_token names as an array and a string
+                    my @names = map { $_->[0] } @$ambiguous_token; 
+                    my $names = join('/', @names);
                     # get $ambiguous_token value 
                     my $value = $ambiguous_token->[0]->[1];
                     # disambiguate $ambiguous_token (well, sort of)
-                    my $disambiguated_token = [ $types, $value ];
+                    my $disambiguated_token = [ $names, $value ];
                     # replace ambiguous token with disambiguated
                     $tokens->[$i] = $disambiguated_token;
                     # generate *unique* rules for the $ambiguous_token
-                    $ambiguous_token_rules->{$_}->{$types} = undef for @types;
+                    $ambiguous_token_rules->{$_}->{$names} = undef for @names;
                 }
             }
 #            _dump "disambiguated tokens", $tokens; 
             # add %$ambiguous_token_rules as generated
 #            _dump "ambiguous token rules", $ambiguous_token_rules;
-            if ($rules_type eq "ARRAY"){
+            if ($rules_name eq "ARRAY"){
                 # lhs => [qw{rhs}]
                 my @rules = map { [ $_ => [ $ambiguous_token_rules->{$_} ] ] } keys %$ambiguous_token_rules;
                 $self->merge_token_rules(\@rules);
@@ -1296,8 +1296,8 @@ sub parse
         if (ref $token->[0] eq "ARRAY"){ # ambiguous token
             # use alternate/end_input
             for my $alternative (@$token) {
-                my ($type, $value) = @$alternative;
-                $recognizer->alternative( $type, \$value, 1 )
+                my ($name, $value) = @$alternative;
+                $recognizer->alternative( $name, \$value, 1 )
             }
             $recognizer->earleme_complete();
         }
