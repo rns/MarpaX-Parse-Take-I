@@ -16,6 +16,8 @@ The repo also contains working examples of (2), (4), and others as shown in READ
 
 I deliberately avoided naming the module MarpaX::Parser as it is not the parser, just an interface to it. The parser is Marpa::R2  [5] by Jeffrey Kegler [6].
 
+This rationale can be forked at Github [7].
+
 [0] http://search.cpan.org/~jkegl/Marpa-R2-2.023_008/pod/Vocabulary.pod
 
 [1] https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/t/09_reversing_diff_bnf.t
@@ -29,3 +31,5 @@ I deliberately avoided naming the module MarpaX::Parser as it is not the parser,
 [5] http://search.cpan.org/~jkegl/Marpa-R2-2.023_008/
 
 [6] http://www.jeffreykegler.com/
+
+[7] https://github.com/rns/Marpa-Easy-proof-of-concept/blob/master/rationale.md
