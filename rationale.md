@@ -1,6 +1,6 @@
-Marpa::R2 allows parsing anything that can be written in BNF. 
+Marpa::R2 parses anything that can be written in BNF. 
 
-This module is intended to move the use of Marpa::R2 closer to the definition of parsing given in [0] by providing
+This module is intended to move the use of Marpa::R2 even closer to the definition of parsing given in [0] by providing:
 
 (1) lexical analyzer (based on the grammar terminals) and thus the ability to use a text (rather than symbol) string as an input;
 
