@@ -12,7 +12,7 @@ This module is intended to move the use of Marpa::R2 closer to the definition of
 
 A working example of (1) and (3) is in a GitHub repo [1]. This is an adaptation of the "reverse diff" use case specified in Parse::RecDescent tutorial [2]
 
-The repo also contains working examples of (2), (4), and others as shown in README.md [3]—this is what I consider to be an alpha (all tests pass) version of the module that was tentatively named Marpa-Easy, discussed on marpa parser mailing list at [4], and after some refactoring will become MarpaX::Parse. 
+The repo also contains working examples of (2), (4), and others as shown in README.md [3]—this is what I consider to be an alpha (all tests pass) version of the module that was tentatively named Marpa-Easy, discussed on marpa parser mailing list at [4], and after some refactoring will become MarpaX::Parse. Or so I hope. :)
 
 I deliberately avoided naming the module MarpaX::Parser as it is not the parser, just an interface to it. The parser is Marpa::R2  [5] by Jeffrey Kegler [6].
 
