@@ -43,4 +43,20 @@ is $mp->show_recognition_failures, $expected_recognition_failures, "recognitions
 
 }
 
+my $mp1 = Marpa::Easy->new({
+    rules => q{
+        Expression  ::= Term | Term Op Term
+        Term        ::= Factor+
+        Factor      ::= Number | LP Expression RP
+        Op          ::= '+'
+        Number      ::= 'qr/\d+/'
+    },
+    default_action => 'tree',
+    show_recognition_failures => 1,
+});
+
+my $tree = $mp1->parse('1+2+1');
+
+say $mp1->show_parse_tree;
+
 done_testing;

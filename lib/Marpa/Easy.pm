@@ -284,6 +284,8 @@ sub _dump {
     my $var         = shift;
     my $stack_trace = shift || 0;
     
+#    cluck "_dump";
+    
     my $dump = ref $var ? 
         DumpTree( $var, "# $comment:", DISPLAY_ADDRESS => 0, DISPLAY_OBJECT_TYPE => 0 )
         :
@@ -385,6 +387,10 @@ sub get_option{
             my $lr = $self->{lexer_rules};
             $value = join "\n", map { join ': ', $_, $lr->{$_} } sort keys %$lr;
         }
+        # recognition failures        
+        elsif ($option eq 'recognition_failures'){
+            $value = @{ $self->{$option} } ? _dump ("recognition failures", $self->{$option}) : "";
+        }
         # anything else
         else{
             $value = Dump $value;
@@ -421,8 +427,11 @@ sub show_option{
     my $option = shift;
 
     if (exists $self->{"show_$option"}){
-        my $comment = $self->comment_option($option);
-        say join "\n", $comment, $self->get_option($option);
+        my $value = $self->get_option($option);
+        if ($value){
+            my $comment = $self->comment_option($option);
+            say join "\n", $comment, $value;
+        }
     }
 }
 
@@ -1011,6 +1020,7 @@ sub show_parse_tree{
         for my $i (0..@$tree-1){
             $trees .= "# Parse Tree @{[$i+1]}:\n" . $self->show_parse_tree($tree->[$i], $format) . "\n";
         }
+        chomp $trees;
         return $trees;
     }
     else{
@@ -1176,20 +1186,18 @@ sub recognition_failure {
     
     my $token = $tokens->[$token_ix];
     
-    my $rf = $self->{recognition_failures};
-    
-    push @$rf, { 
-        token               => join ': ', @$token,
-        events              => $recognizer->events,
+    push @{ $self->{recognition_failures} }, { 
+        token               => join(': ', @$token),
+        events              => [ $recognizer->events ],
         exhausted           => $recognizer->exhausted,
         latest_earley_set   => $recognizer->latest_earley_set,
-        progress            => $recognizer->progress,
-        terminals_expected  => $recognizer->terminals_expected,
+        progress            => [ $recognizer->progress ],
+        terminals_expected  => [ $recognizer->terminals_expected ],
     };
     
     # fix things (that includes do nothing) and return true to continue parsing
     # undef will lead to die()
-    return 1;
+    return "true";
 }
 
 
@@ -1303,12 +1311,15 @@ sub parse
             $recognizer->earleme_complete();
         }
         else{ # unambiguous token
-            defined $recognizer->read( @$token ) or $self->{recognition_failure_sub}->($self, $recognizer, $i, $tokens) or die "Parse failed";
+               defined $recognizer->read( @$token ) 
+            or $self->{recognition_failure_sub}->($self, $recognizer, $i, $tokens) 
+            or die "Parse failed";
         }
 #        say "# progress:", $recognizer->show_progress;
     }
-    
+
     $self->show_option('recognition_failures');
+    $self->show_recognition_failures if $self->{recognition_failures};
     
     # get values    
     my @values;
@@ -1329,7 +1340,7 @@ sub parse
         # save parse to test for uniqueness
         $values{$value_dump} = undef;
     }
-    
+
     # set up the return value and parse tree reference    
     if (wantarray){         # mupltiple parses are expected
         $self->{parse_tree} = \@values;
