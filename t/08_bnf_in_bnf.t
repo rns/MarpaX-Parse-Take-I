@@ -160,7 +160,10 @@ for my $number (@$numbers){
     my $t = XML::Twig->new;
     $t->parse($xml);
 
-    # seems to be the easiest way to get the input back
+    # "Each parse tree represents a string of terminals s, which we call Yield of a tree the yield of the tree.
+    # The string s consists of the labels of the leaves of the tree, in left-to-right order." 
+    # — http://i.stanford.edu/~ullman/focs/ch11.pdf
+    # so this is the easiest way to get the input back
     my $deparsed_number = $t->root->text;
 
     # test
