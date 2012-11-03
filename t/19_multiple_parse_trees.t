@@ -6,6 +6,8 @@ use YAML;
 
 use Test::More;
 
+use Test::Differences;
+
 use Marpa::Easy;
 
 # grammar
@@ -33,7 +35,7 @@ my $mp = Marpa::Easy->new({
 
 my @trees = $mp->parse('1 + 1');
 
-is $mp->show_parse_tree, <<EOT, "multiple parse trees shown";
+eq_or_diff_text $mp->show_parse_tree, <<EOT, "multiple parse trees shown";
 # Parse Tree 1:
 Expression
 |- Term 
@@ -48,6 +50,7 @@ Expression
       `- Factor 
          `- Identifier 
             `- 1 
+
 # Parse Tree 2:
 Expression
 |- Term 
@@ -62,6 +65,7 @@ Expression
       `- Factor 
          `- Identifier 
             `- 1 
+
 # Parse Tree 3:
 Expression
 |- Term 
@@ -76,6 +80,7 @@ Expression
       `- Factor 
          `- Number 
             `- 1 
+
 # Parse Tree 4:
 Expression
 |- Term 
