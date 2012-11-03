@@ -14,51 +14,43 @@ use_ok 'Marpa::Easy';
 # where the necessary details are provided.
 #
 
-#
-# We are parsing the sentence using 2 methods: one is input model (IM) that implies 
-# using alternate()/earleme_complete() when ambiguous tokens are seen
-# and the other is ambiguous tokens (AT) that joins ambiguous tokens types 
-# into a single token and adds token rules like [ type1 => ['type1/type2/type3'] ]
-# to the grammar. The test case cited uses both methods in a single grammar.
-#
+# SENT for sentence, CLAU for clause, OBJT for object, ADJN for adjunct
 my $grammar = q{
     
-    S    ::= C | C comma conjunction C
+    SENT  ::= CLAU | CLAU PUNC? CONJ CLAU
     
-    C      ::= NP VP
+    CLAU  ::= NP VP
     
-    V        ::= v
-    O      ::= NP
+    OBJT  ::= NP
     
-    NP          ::= article? adjective? noun
+    NP    ::= DET? ADJ? NOUN
 
-    VP          ::= V O | V A
-    A     ::= PP                  
-    PP          ::= preposition NP
-    
-    adjective   ::= adj
-    article     ::= ia
-    comma       ::= ,
-    conjunction ::= c
-    noun        ::= n
-    preposition ::= p
-    
+    VP    ::= VERB OBJT | VERB ADJN
+    ADJN  ::= PP                  
+    PP    ::= PREP NP
+
 };
 
-# part-of-speech (pos) data 
+# part-of-speech (pos) data based on "A Universal Part-of-Speech Tagset" 
+# by Slav Petrov, Dipanjan Das and Ryan McDonald
+# for more details: http://arxiv.org/abs/1104.2086
+# http://code.google.com/p/universal-pos-tags/source/browse/trunk/README
+# except that . changed for PUNC in ". - punctuation"
 my $pos = {
 
-    a       => [qw{ ia       }],    # indefinite article
-    an      => [qw{ ia       }],
+    ','     => [qw{ PUNC                        }],    # commas, periods, etc.
 
-    arrow   => [qw{    adj n   }],    
-    banana  => [qw{    adj n   }],
-    but     => [qw{ c        }],    # conjunction
-    flies   => [qw{      n v }],    
-    fruit   => [qw{    adj n v }],    # adjective noun verb
-    time    => [qw{    adj n v }],    
+    a       => [qw{      DET                    }],    # indefinite article
+    an      => [qw{      DET                    }],
 
-    like    => [qw{ p  adj n v }],    # like is also a preposition
+    arrow   => [qw{             ADJ NOUN        }],    
+    banana  => [qw{             ADJ NOUN        }],
+    but     => [qw{      CONJ                   }],    # conjunction
+    flies   => [qw{                 NOUN VERB   }],    
+    fruit   => [qw{             ADJ NOUN VERB   }],    # adjective noun verb
+    time    => [qw{             ADJ NOUN VERB   }],    
+
+    like    => [qw{      PREP   ADJ NOUN VERB   }],    # like is also a preposition
 
 };
 
@@ -84,7 +76,6 @@ sub tokenize {
         # set empty otherwise
         my %pos = ref $wn eq 'WordNet::QueryData' ? 
                   map   { $_->[1] => undef } 
-                  grep  { $_ ne 'r' } # filter adverbs out
                   map   { [ split /#/ ] } $wn->validForms( $lexem ) : 
                   ();
                   
@@ -121,18 +112,16 @@ my %token_rules;
 for my $token (@$tokens){
     # ambiguous
     if (ref $token->[0] eq "ARRAY"){
-        next unless $token->[0]->[1] =~ /\w/;
         $token_rules{$_} = undef for map { join ' ::= ', @$_ } @$token;
     }
     # unambiguous
     else{ 
-        next unless $token->[1] =~ /\w/;
         $token_rules{join ' ::= ', @$token} = undef;
     }
 }
 my $token_rules = join "\n", sort keys %token_rules;
 
-say $grammar . $token_rules;
+#say $grammar . $token_rules;
 
 #
 # set up the grammar handling ambiguity with input model
@@ -142,26 +131,28 @@ my $mp_IM = Marpa::Easy->new({
     default_action => 'sexpr',
     ambiguity => 'input_model',
 });
-say $mp_IM->show_rules;
+#say $mp_IM->show_rules;
 isa_ok $mp_IM, 'Marpa::Easy';
 
 my @input_model_parses = $mp_IM->parse( [ map { [ $_, $_ ] } grep { $_ } map { s/^\s+//; s/\s+$//; $_ } split /(\w+)/, $sentence ] );
 
 # expected
 my $expected_IM = <<EOT;
-(S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
-(S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
-(S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
-(S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
+(SENT (CLAU (NP (ADJ time) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJ fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET a) (NOUN banana))))))
+(SENT (CLAU (NP (ADJ time) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET a) (NOUN banana)))))))
+(SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJ fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET a) (NOUN banana))))))
+(SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET a) (NOUN banana)))))))
 EOT
 
+# stringify the parse trees
 my $trees = join("\n", map { $mp_IM->show_parse_tree($_) } sort @input_model_parses);
-# tests
+
+# test
 unless (
     is $trees . "\n", 
     $expected_IM, 
-    "ambiguous sentence ‘$sentence’ parsed using alternate()/earleme_complete() input model"
-    ){
+    "parsed '$sentence'"
+) {
     say $trees;
 }
 
