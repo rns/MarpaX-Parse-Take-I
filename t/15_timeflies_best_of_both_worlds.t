@@ -23,7 +23,7 @@ my $grammar = q{
     
     OBJT  ::= NP
     
-    NP    ::= DET? ADJ? NOUN
+    NP    ::= DET? ADJC? NOUN
 
     VP    ::= VERB OBJT | VERB ADJN
     ADJN  ::= PP                  
@@ -38,19 +38,19 @@ my $grammar = q{
 # except that . changed for PUNC in ". - punctuation"
 my $pos = {
 
-    ','     => [qw{ PUNC                        }],    # commas, periods, etc.
+    ','     => [qw{ PUNC                                }],    # commas, periods, etc.
 
-    a       => [qw{      DET                    }],    # indefinite article
-    an      => [qw{      DET                    }],
+    a       => [qw{      DET                            }],    # indefinite article
+    an      => [qw{      DET                            }],
 
-    arrow   => [qw{             ADJ NOUN        }],    
-    banana  => [qw{             ADJ NOUN        }],
-    but     => [qw{      CONJ                   }],    # conjunction
-    flies   => [qw{                 NOUN VERB   }],    
-    fruit   => [qw{             ADJ NOUN VERB   }],    # adjective noun verb
-    time    => [qw{             ADJ NOUN VERB   }],    
+    arrow   => [qw{             ADJC    NOUN            }],    
+    banana  => [qw{             ADJC    NOUN            }],
+    but     => [qw{      CONJ                           }],    # conjunction
+    flies   => [qw{                     NOUN    VERB    }],    
+    fruit   => [qw{             ADJC    NOUN    VERB    }],    # adjective noun verb
+    time    => [qw{             ADJC    NOUN    VERB    }],    
 
-    like    => [qw{      PREP   ADJ NOUN VERB   }],    # like is also a preposition
+    like    => [qw{      PREP   ADJC    NOUN    VERB    }],    # like is also a preposition
 
 };
 
@@ -138,9 +138,9 @@ my @input_model_parses = $mp_IM->parse( [ map { [ $_, $_ ] } grep { $_ } map { s
 
 # expected
 my $expected_IM = <<EOT;
-(SENT (CLAU (NP (ADJ time) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJ fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET a) (NOUN banana))))))
-(SENT (CLAU (NP (ADJ time) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET a) (NOUN banana)))))))
-(SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJ fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET a) (NOUN banana))))))
+(SENT (CLAU (NP (ADJC time) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJC fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET a) (NOUN banana))))))
+(SENT (CLAU (NP (ADJC time) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET a) (NOUN banana)))))))
+(SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJC fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET a) (NOUN banana))))))
 (SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET a) (NOUN banana)))))))
 EOT
 
