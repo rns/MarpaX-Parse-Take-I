@@ -21,7 +21,7 @@ my $grammar = q{
 
 my $ebnf = Marpa::Easy->new({
     rules => $grammar,
-    default_action => 'sexpr',
+    default_action => 'tree',
     ebnf => 1,
 #    show_tokens => 1,
     quantifier_rules => 'recursive',

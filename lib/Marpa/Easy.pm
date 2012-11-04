@@ -627,7 +627,13 @@ sub _quantifiers_to_rules
                                     lhs     => $seq,
                                     rhs     => [ $seq, $item ],
                                     action  => sub { 
-                                        push @{ $_[1] }, $_[2];
+#                                        say Dump \@_;
+                                        if (ref $_[1] eq "" and ref $_[2] eq ""){
+                                            return ($_[1] ? $_[1] : '') . ($_[2] ? $_[2] : '');
+                                        }
+                                        else{
+                                            push @{ $_[1] }, $_[2];
+                                        }
                                         return $_[1];
                                     },
                                 };
@@ -1019,7 +1025,7 @@ sub sexpr {
     
     # Throw away any undef's
     if (my @children = grep { defined } @_){
-        return "($lhs " . join(' ', @children) . ")";
+        return "($lhs " . join(' ', map { ref $_ eq "ARRAY" ? join ' ', @$_ : $_ } @children) . ")";
     }
     
     return undef; 
@@ -1109,10 +1115,8 @@ sub show_parse_tree{
     my $format = shift || 'text';
     
     # handle multiple parses
-    # TODO:
-    #   multiple parse trees shall be distinguished from parse values, which are arrays
-    #   parse need to set $self->{multiple_parse_trees}
-    if (ref $tree eq "ARRAY" and $self->{multiple_parse_trees}){
+    if (ref $tree eq "ARRAY" and $self->{multiple_parse_trees} 
+        and $self->{default_action} ne __PACKAGE__ . '::AoA_with_rule_signatures'){
         my $trees = '';
         for my $i (0..@$tree-1){
             $trees .= "# Parse Tree @{[$i+1]}:\n" . $self->show_parse_tree($tree->[$i], $format) . "\n";
@@ -1445,7 +1449,9 @@ sub parse{
         # save parse to test for uniqueness
         $values{$value_dump} = undef;
     }
-    $self->{multiple_parse_trees} = scalar keys %values > 1;
+    # TODO: replace recursion in show_parse_tree with loop
+    # $self->{parse_tree} shall always be array 
+    $self->{multiple_parse_trees} = scalar @values - 1;
     
     # set up the return value and parse tree reference    
     if (wantarray){         # mupltiple parses are expected
