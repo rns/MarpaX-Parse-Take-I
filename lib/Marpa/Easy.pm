@@ -154,8 +154,9 @@ my $marpa_easy_options = {
     # transform quantified symbols into sequence (by default) or recursive rules
     quantifier_rules => undef,
     
-    # TODO: adding nullable rules instead of adding rules with ?/*-quanfitied symbols removed
-    added_quantifier_rules => undef,
+    # if true, nullable symbols will be added instead removing the rules 
+    # with ?/*-quanfitied symbols
+    nullable_quantified_symbols => undef,
     
     # handle ambuous tokens with input model (alternate()/earleme_complete()
     ambiguity => undef,
@@ -209,9 +210,10 @@ sub build{
         }
     }
     # set defaults
-    $self->{quantifier_rules}        //= 'sequence';
-    $self->{ambiguity}               //= 'input_model';
-    $self->{recognition_failure_sub} //= \&recognition_failure;
+    $self->{quantifier_rules}               //= 'sequence';
+    $self->{nullable_quantified_symbols}    //= 0;
+    $self->{ambiguity}                      //= 'input_model';
+    $self->{recognition_failure_sub}        //= \&recognition_failure;
     
     # TODO: extract recognizer options
     my @recognizer_options = qw{
@@ -567,8 +569,6 @@ sub _quantifiers_to_rules
     # prevent duplication of sequence rules' lhs 
     my $sequence_lhs = {}; 
 
-    # TODO: respect $self->{added_quantifier_rules} = nullable
-    
     # process rules
     for my $j (0..@$rules-1){
         my $rule = $rules->[$j];
@@ -618,13 +618,18 @@ sub _quantifiers_to_rules
                                 push @$quantified_symbol_rules, { 
                                     lhs     => $seq,
                                     rhs     => [ $item ],
-                                    action  => sub { [ $_[1] ] },
+                                    action  => sub { 
+                                        [ $_[1] ];
+                                    },
                                 };
                                 # seq ::= item seq
                                 push @$quantified_symbol_rules, { 
                                     lhs     => $seq,
                                     rhs     => [ $seq, $item ],
-                                    action  => sub { push @{ $_[1] }, $_[2]; $_[1] },
+                                    action  => sub { 
+                                        push @{ $_[1] }, $_[2];
+                                        return $_[1];
+                                    },
                                 };
                             }
                             else{
@@ -656,53 +661,78 @@ sub _quantifiers_to_rules
         }
     }
     
-    # alternatively, just add [ nullable_symbol => [] ] rules 
-    
-    # generate and add rules with nullable symbols
-    my @rules_with_nullables;
-    for my $j (keys %$nullable_symbol_indices){
-        my $rule = $rules->[$j];
+    # add rules for quantified symbols
+#    say Dump $quantified_symbol_rules;
+    push @$rules, @$quantified_symbol_rules;
 
-        my ($lhs, $rhs);
-        given (ref $rule){
-            when ("HASH"){
-                $lhs = $rule->{lhs};
-                $rhs = $rule->{rhs};
-            }
-            when ("ARRAY"){
-                ($lhs, $rhs) = @$rule;
-            }
-        }
+    # just add [ nullable_symbol => [] ] rules if the options are set
+    if ($self->{nullable_quantified_symbols} and $self->{quantifier_rules} eq 'recursive'){
+        my @nullables;
+        for my $j (keys %$nullable_symbol_indices){
+            my $rule = $rules->[$j];
 
-        my @nullables = sort keys %{ $nullable_symbol_indices->{$j} };
-        # generate the indices of symbols to null
-#        say "$lhs -> @$rhs\nnullables:@nullables";
-        my @symbols_to_null;
-        for my $k (1..@nullables){
-            my @combinations = combine($k, @nullables);
-            push @symbols_to_null, \@combinations;
-#            say "$k:", join ' | ', map { join ' ', @$_ } @combinations;
-        }
-        # generate nullables rhs by deleting nullable symbols according to generated indices
-        for my $combinations (@symbols_to_null){
-            # delete (null) nullable symbols
-            for my $combination (@$combinations){
-#                say "@$combination";
-                my @nullable_rhs = @$rhs;
-                for my $index (@$combination){
-                    $nullable_rhs[$index] = undef;
+            my ($lhs, $rhs);
+            given (ref $rule){
+                when ("HASH"){
+                    $lhs = $rule->{lhs};
+                    $rhs = $rule->{rhs};
                 }
-                @nullable_rhs = grep {defined} @nullable_rhs;
-#                say "$lhs -> @nullable_rhs";
-                push @rules_with_nullables, { lhs => $lhs, rhs => \@nullable_rhs };
+                when ("ARRAY"){
+                    ($lhs, $rhs) = @$rule;
+                }
+            }
+
+            my @nullables = sort keys %{ $nullable_symbol_indices->{$j} };
+            for my $nullable (@nullables){
+                say $rhs->[$nullable];
+                push @$rules, [ $rhs->[$nullable] => [] ];
             }
         }
     }
-#    say Dump \@rules_with_nullables;
-#    say Dump $quantified_symbol_rules;
-    
-    push @$rules, @$quantified_symbol_rules;
-    push @$rules, @rules_with_nullables;
+    else {
+        # generate and add rules with nullable symbols
+        my @rules_with_nullables;
+        for my $j (keys %$nullable_symbol_indices){
+            my $rule = $rules->[$j];
+
+            my ($lhs, $rhs);
+            given (ref $rule){
+                when ("HASH"){
+                    $lhs = $rule->{lhs};
+                    $rhs = $rule->{rhs};
+                }
+                when ("ARRAY"){
+                    ($lhs, $rhs) = @$rule;
+                }
+            }
+
+            my @nullables = sort keys %{ $nullable_symbol_indices->{$j} };
+            # generate the indices of symbols to null
+    #        say "$lhs -> @$rhs\nnullables:@nullables";
+            my @symbols_to_null;
+            for my $k (1..@nullables){
+                my @combinations = combine($k, @nullables);
+                push @symbols_to_null, \@combinations;
+    #            say "$k:", join ' | ', map { join ' ', @$_ } @combinations;
+            }
+            # generate nullables rhs by deleting nullable symbols according to generated indices
+            for my $combinations (@symbols_to_null){
+                # delete (null) nullable symbols
+                for my $combination (@$combinations){
+    #                say "@$combination";
+                    my @nullable_rhs = @$rhs;
+                    for my $index (@$combination){
+                        $nullable_rhs[$index] = undef;
+                    }
+                    @nullable_rhs = grep {defined} @nullable_rhs;
+    #                say "$lhs -> @nullable_rhs";
+                    push @rules_with_nullables, { lhs => $lhs, rhs => \@nullable_rhs };
+                }
+            }
+        }
+    #    say Dump \@rules_with_nullables;
+        push @$rules, @rules_with_nullables;
+    }
     
 }
 
@@ -988,9 +1018,11 @@ sub sexpr {
     my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
     
     # Throw away any undef's
-    my @children = grep { defined } @_;
+    if (my @children = grep { defined } @_){
+        return "($lhs " . join(' ', @children) . ")";
+    }
     
-    return "($lhs " . join(' ', @children) . ")";
+    return undef; 
 }
 
 sub tree { 
@@ -998,27 +1030,33 @@ sub tree {
     # The per-parse variable.
     shift;
     
-#    say "# tree:\n", Dump [ map { ref $_ eq 'Tree::Simple' ? ref $_ : $_ } @_ ];
+    my @children = grep { defined } @_;
     
-    # get the rule's lhs
-    my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
-    
-    # set up the parse tree node
-    my $node = Tree::Simple->new($lhs);
-    $node->addChildren(
-        map { 
-                ref $_ eq 'Tree::Simple' 
-                    ? $_ 
-                    : ref $_ eq "ARRAY" 
-                        ? map { ref $_ eq 'Tree::Simple' 
-                            ? $_ 
-                                : Tree::Simple->new($_) } @$_ 
-                            : Tree::Simple->new($_) 
-            } 
-            grep { defined } @_
-    );
-    
-    return $node;
+    if (@children){
+#        say "# tree:\n", Dump [ map { ref $_ eq 'Tree::Simple' ? ref $_ : $_ } @children ];
+
+        # get the rule's lhs
+        my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
+
+        # set up the parse tree node
+        my $node = Tree::Simple->new($lhs);
+        $node->addChildren(
+            map { 
+                    ref $_ eq 'Tree::Simple' 
+                        ? $_ 
+                        : ref $_ eq "ARRAY" 
+                            ? map { ref $_ eq 'Tree::Simple' 
+                                ? $_ 
+                                    : Tree::Simple->new($_) } grep { defined $_ } @$_ 
+                                : Tree::Simple->new($_) 
+                } 
+                @children
+        );
+
+        return $node;
+    }
+
+    return undef;
 }
 
 # remove unneeded Tree::Simple information from Data::TreeDumper's output
@@ -1386,8 +1424,14 @@ sub parse{
     my %values; # only unique parses will be returned
     while ( defined( my $value_ref = $recognizer->value() ) ) {
         my $value = $value_ref ? ${$value_ref} : 'No parse';
-        my $value_dump = Dump $value;
-        # skip duplicate parses
+        # use dumper based on default_action
+        my $value_dump = ref $value ? 
+            $self->{default_action} eq __PACKAGE__ . '::tree' ?
+                $self->show_parse_tree($value, 'text') 
+                :
+                Dump $value
+            :
+            $value;
         # TODO: $ebnf_parser produces very ambiguous grammars
         next if exists $values{$value_dump};
         # save unique parses for return
