@@ -154,8 +154,13 @@ my $marpa_easy_options = {
     # transform quantified symbols into sequence (by default) or recursive rules
     quantifier_rules => undef,
     
+    # TODO: adding nullable rules instead of adding rules with ?/*-quanfitied symbols removed
+    added_quantifier_rules => undef,
+    
     # handle ambuous tokens with input model (alternate()/earleme_complete()
     ambiguity => undef,
+    
+    ebnf => undef,
 };
 
 #
@@ -207,7 +212,7 @@ sub build{
     $self->{quantifier_rules}        //= 'sequence';
     $self->{ambiguity}               //= 'input_model';
     $self->{recognition_failure_sub} //= \&recognition_failure;
-
+    
     # TODO: extract recognizer options
     my @recognizer_options = qw{
         closures
@@ -238,15 +243,14 @@ sub build{
         $bnf = 1;
         my $rules;
         # ebnf (contains grouping (non-literal) parens)
-        if ($options->{rules} =~ /(?<!['])\(.*?\)(?!['])/){ 
-            say "EBNF";
+        if ($self->{ebnf}){ 
             $rules = $self->_ebnf_to_rules( $options->{rules} );
         }
         # bnf
         else{ 
             $rules = $self->_bnf_to_rules( $options->{rules} );
         }
-        # TODO: catch BNF parsing errors
+        # TODO: catch BNF parsing errors, e.g. := not ::=
         @rules = @$rules;
         $self->set_option('parsed_bnf_rules', \@rules);
     }
@@ -506,12 +510,12 @@ sub _ebnf_to_rules
     
     my $ebnf = shift;
 
-    say Dump $ebnf;
+#    say Dump $ebnf;
     
     # parse ebnf
     my $ebnf_tokens = Marpa::Easy::EBNF->lex_ebnf_text($ebnf);
     
-    say Dump $ebnf_tokens;
+#    say Dump $ebnf_tokens;
     
     # save ebnf tokens
     $self->set_option('ebnf_tokens', join "\n", map { join ': ', @$_ } @$ebnf_tokens);
@@ -525,8 +529,8 @@ sub _ebnf_to_rules
     # TODO: show bnf parser tokens, rules, and closures if the relevant options are set
     
     # parse EBNF tokens to Marpa::R2 rules
-    say "# parsing EBNF";
-    say $ebnf_parser->show_rules;
+#    say "# parsing EBNF";
+#    say $ebnf_parser->show_rules;
     my $rules = $ebnf_parser->parse($ebnf_tokens);
     
     return $rules;
@@ -562,6 +566,8 @@ sub _quantifiers_to_rules
     
     # prevent duplication of sequence rules' lhs 
     my $sequence_lhs = {}; 
+
+    # TODO: respect $self->{added_quantifier_rules} = nullable
     
     # process rules
     for my $j (0..@$rules-1){
@@ -649,7 +655,9 @@ sub _quantifiers_to_rules
             }
         }
     }
-
+    
+    # alternatively, just add [ nullable_symbol => [] ] rules 
+    
     # generate and add rules with nullable symbols
     my @rules_with_nullables;
     for my $j (keys %$nullable_symbol_indices){
@@ -1063,7 +1071,10 @@ sub show_parse_tree{
     my $format = shift || 'text';
     
     # handle multiple parses
-    if (ref $tree eq "ARRAY"){
+    # TODO:
+    #   multiple parse trees shall be distinguished from parse values, which are arrays
+    #   parse need to set $self->{multiple_parse_trees}
+    if (ref $tree eq "ARRAY" and $self->{multiple_parse_trees}){
         my $trees = '';
         for my $i (0..@$tree-1){
             $trees .= "# Parse Tree @{[$i+1]}:\n" . $self->show_parse_tree($tree->[$i], $format) . "\n";
@@ -1376,8 +1387,8 @@ sub parse{
     while ( defined( my $value_ref = $recognizer->value() ) ) {
         my $value = $value_ref ? ${$value_ref} : 'No parse';
         my $value_dump = Dump $value;
-        say $value_dump;
         # skip duplicate parses
+        # TODO: $ebnf_parser produces very ambiguous grammars
         next if exists $values{$value_dump};
         # save unique parses for return
         # prepend xml prolog and encode to utf8 if we need to return an XML string
@@ -1390,7 +1401,8 @@ sub parse{
         # save parse to test for uniqueness
         $values{$value_dump} = undef;
     }
-
+    $self->{multiple_parse_trees} = scalar keys %values > 1;
+    
     # set up the return value and parse tree reference    
     if (wantarray){         # mupltiple parses are expected
         $self->{parse_tree} = \@values;

@@ -16,31 +16,128 @@ sub new
     return $self;
 }
 
-my $action_prolog = q{
-    # start action prolog
-    # imports
-    use 5.010; use strict; use warnings; use YAML;
-    # rule parts and signature
-    my ($rule_lhs, @rule_rhs) = $Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule);
-    my $rule_signature = $rule_lhs . ' -> ' . join ' ', @rule_rhs;
-    # end action prolog
-};
+# expressions in parens (factor)
+my %subrules    = ();
+my $subrule_no  = 0;
 
 my $ebnf_rules = [
     
-    [ grammar => [qw( production+ )] ],
+    [ grammar => [qw( production+ )], sub {
+        shift;
+        my $rules = [];
+        my @productions = @_;
+        for my $production (@productions){
+            for my $Marpa_rules (@$production){
+                push @$rules, @$Marpa_rules;
+            }
+        }
+        $rules;
+    } ],
 
-    [ production => [qw( lhs ::= rhs )] ],
+    [ production => [qw( lhs ::= rhs )], 
+        sub {
+            shift;
+            
+            my ($lhs, undef, $rhs) = @_;
+            
+            my $rules;
+            
+#            say "=-" x 32;
+#            say "# adding\n";
+
+#            say "# production/lhs\n", $lhs;
+#            say "# production/rhs\n", Dump $rhs;
+#            say "# subrules\n", Dump \%subrules;
+            
+            # add rule
+#            say "# rule:\n$lhs\n", Dump $rhs;
+            # TODO: quantifier
+            my $alt = $rhs->{alternation};
+            my $qnt = $rhs->{quantifier};
+            for my $seq ( map { $_->{sequence} } @$alt ){
+                my @symbols = map { ref $_ eq "HASH" ? $_->{symbol} : "$lhs$_" } @$seq;
+#                say "$lhs -> @symbols";
+                push @$rules, [ $lhs, \@symbols ];
+            }            
+            
+            # add subrules prepending the rule's $lhs
+            for my $subrule_lhs (sort keys %subrules){
+                my $subrule_rhs = $subrules{$subrule_lhs};
+#                say "# subrule:\n$subrule_lhs\n", Dump $subrule_rhs;
+                for my $seq (map { $_->{sequence} } @{ $subrule_rhs->{alternation} }){
+                    my @symbols = map { ref $_ eq "HASH" ? $_->{symbol} : "$lhs$_" } @$seq;
+                    # remove quantifiers
+                    $subrule_lhs =~ s/\?|\*|\+//;
+#                    say "$lhs$subrule_lhs -> @symbols";
+                    push @$rules, [ "$lhs$subrule_lhs", \@symbols ];
+                }            
+            }
+            
+            # reinitialize
+            %subrules    = ();
+            $subrule_no  = 0;
+            
+            $rules;
+        }
+    ],
     
     [ lhs => [qw( symbol )] ],
     
-    { lhs => 'rhs', rhs => ['term'], min => 1, separator => '|', proper => 1 },
-    { lhs => 'term', rhs => ['factor'], min => 1, proper => 1 },
-    [ factor => [qw(symbol)] ], 
-    [ factor => [qw(    '(' rhs ')'  action? )] ], 
-    [ factor => [qw(    '(' rhs ')?' action? )] ], 
-    [ factor => [qw(    '(' rhs ')*' action? )] ], 
-    [ factor => [qw(    '(' rhs ')+' action? )] ], 
+    { lhs => 'rhs', rhs => ['term'], min => 1, separator => '|', proper => 1, action =>
+        sub {
+            shift;
+            { alternation => \@_ }
+        }
+    },
+
+    { lhs => 'term', rhs => ['factor'], min => 1, proper => 1, action =>
+        sub {
+            shift;
+            { sequence => \@_ }
+        }
+    },
+
+    [ factor => [qw(     symbol )], 
+        sub { 
+            { symbol => $_[1] }
+        } 
+    ], 
+
+    [ factor => [qw(     symbol quantifier )], 
+        sub { 
+            { symbol => "$_[1]$_[2]"  }
+        } 
+    ], 
+    
+    [ factor => [qw( '(' rhs ')' )], 
+        sub { 
+            my $subrule = $_[2]; #{ symbols => $_[2] };
+
+            # add subrule under provisional lhs
+            my $prov_lhs = "__subrule" . $subrule_no++;
+            $subrules{$prov_lhs} = $subrule;
+            
+            # return provisional lhs
+            $prov_lhs;
+        }
+    ], 
+    [ factor => [qw( '(' rhs ')' quantifier )], 
+        sub { 
+            my $subrule = $_[2];
+#            $subrule->{quantifier} = $_[4];
+
+            # add subrule under provisional lhs with quantifier
+            my $prov_lhs = "__subrule" . $subrule_no++ . $_[4];
+            $subrules{$prov_lhs} = $subrule;
+            
+            # return provisional lhs
+            $prov_lhs;
+        } 
+    ], 
+
+    [ quantifier => [qw( '?' )] ], 
+    [ quantifier => [qw( '*' )] ], 
+    [ quantifier => [qw( '+' )] ], 
 
     [ symbol     => [qw( identifier )] ],
     [ symbol     => [qw( literal    )] ],
@@ -50,7 +147,6 @@ my $ebnf_rules = [
 sub rules { $ebnf_rules }
 
 my $balanced_terminals = {
-    '%{.+?%}' => 'action',
     '".+?"' => 'literal',
     "'.+?'" => 'literal',
 };
@@ -61,9 +157,9 @@ my $literal_terminals = {
     '|' => '|',
     '(' => "'('",
     ')' => "')'",
-    ')?' => "')?'",
-    ')*' => "')*'",
-    ')+' => "')+'",
+    '?' => "'?'",
+    '*' => "'*'",
+    '+' => "'+'",
 };
 my $literal_terminals_re = join '|', map { quotemeta } keys %$literal_terminals;
 # and the rest must be symbols
