@@ -28,69 +28,9 @@ my $action_prolog = q{
 
 my $ebnf_rules = [
     
-    [ grammar => [qw( production+ )], 
-      sub {
-        shift;
-        my $rules = [];
-        my @productions = @_;
-        for my $production (@productions){
-            for my $Marpa_rules (@$production){
-#                say "# production rules: ", Dump $Marpa_rules;
-                push @$rules, @$Marpa_rules;
-            }
-        }
-#        say Dump \@_;
-#        \@_;
-        $rules;
-      } 
-    ],
+    [ grammar => [qw( production+ )] ],
 
-    [ production => [qw( lhs ::= rhs )],
-      sub {
-        shift;
-
-#        say "\n#\n# production -> lhs ::= rhs\n#\n", Dump \@_;
-        my ($lhs, undef, $rhs) = @_;
-#        say ref $rhs;
-        my $rules = [];
-        
-#        say "# production/lhs:\n", $lhs;
-#        say "# production/rhs:\n", Dump $rhs;
-        for my $rule (@$rhs){ # [ { symbols => [], action => $ } ]
-#            say "# production/rhs/rule (", ref $rule, "):\n", Dump $rule;
-            # extract symbols  and action
-            my ($symbols, $action) = map { $rule->{$_} } qw{ symbols action };
-#            say "# production/rhs/rule/symbols:\n", Dump $symbols;
-            $symbols = ref $symbols eq "ARRAY" ? $symbols : [ $symbols ];
-            # add Marpa rules
-            my $Marpa_rule = {
-                lhs => $lhs,
-                rhs => $symbols,
-            };
-            if (defined $action) {
-#                say "# production/rhs/rule/action:\n", $action;
-                # setup anonsub text
-                $action =~ s/^%{/sub{\n$action_prolog\n/;
-                $action =~ s/%}$/}/;
-                # setup closure
-                my $closure = eval_closure(
-                    source => $action,
-                    description => 'action of rule ' . 
-                        $Marpa_rule->{lhs} . ' -> ' . join ' ', @{ $Marpa_rule->{rhs} },
-                );
-                # add action
-                $Marpa_rule->{action} = $closure;
-            }
-            else {
-#                say "# No action";
-            }
-            push $rules, $Marpa_rule;
-        }
-
-#        \@_;
-        $rules;
-      }
-    ],
+    [ production => [qw( lhs ::= rhs )] ],
     
     [ lhs => [qw( symbol )] ],
     
@@ -119,6 +59,11 @@ my $balanced_terminals_re = join '|', keys %$balanced_terminals;
 my $literal_terminals = {
     '::=' => '::=',
     '|' => '|',
+    '(' => "'('",
+    ')' => "')'",
+    ')?' => "')?'",
+    ')*' => "')*'",
+    ')+' => "')+'",
 };
 my $literal_terminals_re = join '|', map { quotemeta } keys %$literal_terminals;
 # and the rest must be symbols

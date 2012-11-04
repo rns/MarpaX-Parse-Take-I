@@ -10,17 +10,22 @@ use_ok 'Marpa::Easy';
 
 my $grammar = q{
 
-    expr := '-'? digit+ ('.' digit+)?
-    digit := '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+expression  ::= term  (('+' | '-') term)*
+term        ::= factor  (('*'|'/') factor)*
+factor      ::= constant | variable | '('  expression  ')'
+variable    ::= 'x' | 'y' | 'z'
+constant    ::= number+
+number      ::= '-'? digit+ ('.' digit+)?
+digit       ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
 };
 
-my $bnf = Marpa::Easy->new({
+my $ebnf = Marpa::Easy->new({
     rules => $grammar,
     default_action => 'AoA',
 });
 
-isa_ok $bnf, 'Marpa::Easy';
+isa_ok $ebnf, 'Marpa::Easy';
 
 my $numbers = [
     '1234',
@@ -30,6 +35,8 @@ my $numbers = [
 ];
 
 for my $number (@$numbers){
-    my $value = $bnf->parse($number);
-    is $value, $number, "numeral $number lexed and parsed with pure BNF";
+    my $value = $ebnf->parse($number);
+    unless (is $value, $number, "numeral $number lexed and parsed with pure BNF"){
+        say $ebnf->show_parse_tree;
+    }
 }

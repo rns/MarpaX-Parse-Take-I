@@ -18,6 +18,7 @@ use Tree::Simple::View::HTML;
 use Data::TreeDumper;
 
 use Marpa::Easy::BNF;
+use Marpa::Easy::EBNF;
 
 use Math::Combinatorics;
 
@@ -167,8 +168,14 @@ my $bnf_parser = Marpa::Easy->new({
     default_action => 'AoA',
 });
 
-sub new
-{
+# EBNF parser grammar setup
+my $ebnf_parser = Marpa::Easy->new({ 
+    rules => Marpa::Easy::EBNF::rules,
+    default_action => 'AoA',
+});
+
+sub new{
+
     my $class = shift;
     my $options = shift;
     
@@ -229,7 +236,16 @@ sub build{
     # scalar means we have a BNF grammar we need to parse to get rules
     else {
         $bnf = 1;
-        my $rules = $self->_bnf_to_rules( $options->{rules} );
+        my $rules;
+        # ebnf (contains grouping (non-literal) parens)
+        if ($options->{rules} =~ /(?<!['])\(.*?\)(?!['])/){ 
+            say "EBNF";
+            $rules = $self->_ebnf_to_rules( $options->{rules} );
+        }
+        # bnf
+        else{ 
+            $rules = $self->_bnf_to_rules( $options->{rules} );
+        }
         # TODO: catch BNF parsing errors
         @rules = @$rules;
         $self->set_option('parsed_bnf_rules', \@rules);
@@ -480,6 +496,38 @@ sub _bnf_to_rules
     
     # parse BNF tokens to Marpa::R2 rules
     my $rules = $bnf_parser->parse($bnf_tokens);
+    
+    return $rules;
+}
+
+sub _ebnf_to_rules
+{
+    my $self = shift;
+    
+    my $ebnf = shift;
+
+    say Dump $ebnf;
+    
+    # parse ebnf
+    my $ebnf_tokens = Marpa::Easy::EBNF->lex_ebnf_text($ebnf);
+    
+    say Dump $ebnf_tokens;
+    
+    # save ebnf tokens
+    $self->set_option('ebnf_tokens', join "\n", map { join ': ', @$_ } @$ebnf_tokens);
+
+    # show EBNF tokens if the option is set
+    
+#    say "# EBNF tokens:\n", $self->show_bnf_tokens if $self->{show_ebnf_tokens};
+#    $self->show_option('ebnf_tokens');
+    
+    # $bnf_parser is a package variable
+    # TODO: show bnf parser tokens, rules, and closures if the relevant options are set
+    
+    # parse EBNF tokens to Marpa::R2 rules
+    say "# parsing EBNF";
+    say $ebnf_parser->show_rules;
+    my $rules = $ebnf_parser->parse($ebnf_tokens);
     
     return $rules;
 }
@@ -1202,8 +1250,8 @@ sub recognition_failure {
 }
 
 
-sub parse
-{
+sub parse{
+
     my $self = shift;
     my $input = shift;
     # TODO: get %$features, split $input, set up $tokens
@@ -1302,7 +1350,7 @@ sub parse
     # read tokens
     for my $i (0..@$tokens-1){
         my $token = $tokens->[$i];
-#_dump "read()ing", $token;
+# _dump "read()ing", $token;
         if (ref $token->[0] eq "ARRAY"){ # ambiguous token
             # use alternate/end_input
             for my $alternative (@$token) {
@@ -1319,8 +1367,8 @@ sub parse
 #        say "# progress:", $recognizer->show_progress;
     }
 
-    $self->show_option('recognition_failures');
-    $self->show_recognition_failures if $self->{recognition_failures};
+#    $self->show_option('recognition_failures');
+#    $self->show_recognition_failures if $self->{recognition_failures};
     
     # get values    
     my @values;
@@ -1328,6 +1376,7 @@ sub parse
     while ( defined( my $value_ref = $recognizer->value() ) ) {
         my $value = $value_ref ? ${$value_ref} : 'No parse';
         my $value_dump = Dump $value;
+        say $value_dump;
         # skip duplicate parses
         next if exists $values{$value_dump};
         # save unique parses for return
