@@ -1191,6 +1191,7 @@ sub recognition_failure {
         events              => [ $recognizer->events ],
         exhausted           => $recognizer->exhausted,
         latest_earley_set   => $recognizer->latest_earley_set,
+        # TODO: stringify progress by converting IDs in to rules/symbols
         progress            => [ $recognizer->progress ],
         terminals_expected  => [ $recognizer->terminals_expected ],
     };
