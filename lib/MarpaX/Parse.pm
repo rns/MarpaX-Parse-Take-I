@@ -211,7 +211,7 @@ sub build{
     }
     # set defaults
     $self->{quantifier_rules}               //= 'sequence';
-    $self->{nullable_quantified_symbols}    //= 0;
+    $self->{nullable_quantified_symbols}    //= 1;
     $self->{ambiguity}                      //= 'input_model';
     $self->{recognition_failure_sub}        //= \&recognition_failure;
     
@@ -629,7 +629,6 @@ sub _quantifiers_to_rules
                                     lhs     => $seq,
                                     rhs     => [ $seq, $item ],
                                     action  => sub { 
-#                                        say Dump \@_;
                                         if (ref $_[1] eq "" and ref $_[2] eq ""){
                                             return ($_[1] ? $_[1] : '') . ($_[2] ? $_[2] : '');
                                         }
@@ -676,6 +675,7 @@ sub _quantifiers_to_rules
     # just add [ nullable_symbol => [] ] rules if the options are set
     if ($self->{nullable_quantified_symbols} and $self->{quantifier_rules} eq 'recursive'){
         my @nullables;
+        my %nullables;
         for my $j (keys %$nullable_symbol_indices){
             my $rule = $rules->[$j];
 
@@ -693,7 +693,10 @@ sub _quantifiers_to_rules
             my @nullables = sort keys %{ $nullable_symbol_indices->{$j} };
             for my $nullable (@nullables){
 #                say $rhs->[$nullable];
+                # avoid tule duplication
+                next if exists $nullables{ $rhs->[$nullable] };
                 push @$rules, [ $rhs->[$nullable] => [] ];
+                $nullables{ $rhs->[$nullable] } = undef;
             }
         }
     }
