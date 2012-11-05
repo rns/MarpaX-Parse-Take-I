@@ -5,7 +5,7 @@ use warnings;
 use YAML;
 use Test::More tests => 3;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 # The below is BNF for decimal numbers, no literals
 #
@@ -39,7 +39,7 @@ my $rules = [
 
 ];
 
-my $m = Marpa::Easy->new({ 
+my $m = MarpaX::Parse->new({ 
     rules => $rules,
     default_action => 'AoA_with_rule_signatures',
 });
@@ -85,7 +85,7 @@ is_deeply $value, Load(<<END_OF_PARSE), "numeral parsed with start symbol and de
         - 4
 END_OF_PARSE
 
-my $m1 = Marpa::Easy->new({ rules => $rules, default_action => 'AoA' });
+my $m1 = MarpaX::Parse->new({ rules => $rules, default_action => 'AoA' });
 $value = $m1->parse($number);
 
 is_deeply $value, Load(<<END_OF_PARSE), "numeral parsed with start symbol set automagically and default action AoA specified";

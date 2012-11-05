@@ -5,7 +5,7 @@ use warnings;
 use YAML;
 use Test::More tests => 4;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # set up grammar
 my $grammar = q{
@@ -21,7 +21,7 @@ my $grammar = q{
 
 };
 
-my $bnf = Marpa::Easy->new({
+my $bnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'xml',
 });

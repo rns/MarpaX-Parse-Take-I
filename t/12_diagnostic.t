@@ -7,7 +7,7 @@ use Test::More;
 
 use Test::Output;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # grammar
 my $grammar = q{
@@ -17,7 +17,7 @@ my $grammar = q{
     digit   ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 };
 
-my $bnf = Marpa::Easy->new({
+my $bnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'sexpr',
 });
@@ -249,7 +249,7 @@ literal: '9'} ],
     my $option  = "show_$option_name";
 
     # set up the grammar
-    my $mp = Marpa::Easy->new({
+    my $mp = MarpaX::Parse->new({
         rules => $grammar,
         default_action => 'AoA',
         $option => 1

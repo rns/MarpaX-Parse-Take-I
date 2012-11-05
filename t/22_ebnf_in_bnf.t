@@ -6,7 +6,7 @@ use Test::More tests => 6;
 
 use YAML;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 my $ebnf_in_bnf = q{
 
@@ -46,13 +46,13 @@ my $ebnf_in_bnf = q{
     
 };
 
-my $ebnf_bnf = Marpa::Easy->new({
+my $ebnf_bnf = MarpaX::Parse->new({
     rules => $ebnf_in_bnf,
     default_action => 'AoA',
     show_bnf_tokens => 1,
 });
 
-isa_ok $ebnf_bnf, 'Marpa::Easy';
+isa_ok $ebnf_bnf, 'MarpaX::Parse';
 
 say $ebnf_bnf->show_rules;
 
@@ -82,7 +82,7 @@ my $arithmetic_rules = $ebnf_bnf->parse($arithmetic);
 say $ebnf_bnf->show_parse_tree;
 
 # set up decimal number bnf
-my $arithmetic_bnf = Marpa::Easy->new({
+my $arithmetic_bnf = MarpaX::Parse->new({
     rules => $arithmetic_rules,
     default_action => 'AoA_with_rule_signatures',
     show_bnf_tokens => 1,

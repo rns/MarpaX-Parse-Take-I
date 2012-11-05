@@ -6,7 +6,7 @@ use Test::More;
 
 use YAML;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 my $inputs = [
 # head1 item? tail1
@@ -384,7 +384,7 @@ my $rules = [
     [ one_or_more_3_tail => [qw(item1+ item2+ item3+ tail3)] ],
 ];
 
-my $me = Marpa::Easy->new({ 
+my $me = MarpaX::Parse->new({ 
     rules => $rules,
     default_action => 'AoA',
 });

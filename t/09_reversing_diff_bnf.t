@@ -6,7 +6,7 @@ use Test::More tests => 1;
 
 use YAML;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 my $grammar = q{
 
@@ -79,7 +79,7 @@ my $reversed_diff = q{16a17,18
 < All rights reserved.
 };
 
-my $me = Marpa::Easy->new({
+my $me = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'AoA',
 });

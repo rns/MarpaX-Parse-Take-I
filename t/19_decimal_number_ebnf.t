@@ -6,7 +6,7 @@ use Test::More tests => 6;
 
 use YAML;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 my $grammar = q{
 
@@ -15,13 +15,13 @@ my $grammar = q{
 
 };
 
-my $ebnf = Marpa::Easy->new({
+my $ebnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'xml',
     ebnf => 1,
 });
 
-isa_ok $ebnf, 'Marpa::Easy';
+isa_ok $ebnf, 'MarpaX::Parse';
 
 my $numbers = [
     '1234',

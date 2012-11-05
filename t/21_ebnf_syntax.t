@@ -6,7 +6,7 @@ use Test::More;
 
 use YAML;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 =pod EBNF syntax 
 
@@ -56,7 +56,7 @@ EOT
     ){
     my ($grammar, $rules) = @$data;
 
-    my $ebnf = Marpa::Easy->new({
+    my $ebnf = MarpaX::Parse->new({
         rules => $grammar,
         ebnf => 1,
 #        show_tokens => 1,

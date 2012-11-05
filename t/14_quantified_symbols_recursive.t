@@ -6,7 +6,7 @@ use Test::More tests => 8;
 
 use YAML;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 my $inputs = [
     [
@@ -74,7 +74,7 @@ my $rules = [
     } ],
 ];
 
-my $me = Marpa::Easy->new({ 
+my $me = MarpaX::Parse->new({ 
     rules => $rules,
     default_action => 'AoA',
     quantifier_rules => 'recursive',

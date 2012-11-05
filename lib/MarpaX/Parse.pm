@@ -1,4 +1,4 @@
-package Marpa::Easy;
+package MarpaX::Parse;
 
 use 5.010;
 use strict;
@@ -17,8 +17,8 @@ use Tree::Simple::View::HTML;
 
 use Data::TreeDumper;
 
-use Marpa::Easy::BNF;
-use Marpa::Easy::EBNF;
+use MarpaX::Parse::BNF;
+use MarpaX::Parse::EBNF;
 
 use Math::Combinatorics;
 
@@ -102,16 +102,16 @@ evaluation of parse by the application
 =cut
 
 #
-# Any BNF grammar passed to Marpa::Easy by setting <rules> to scalar 
-# is parsed by the BNF parser with rules set in Marpa::Easy::BNF
+# Any BNF grammar passed to MarpaX::Parse by setting <rules> to scalar 
+# is parsed by the BNF parser with rules set in MarpaX::Parse::BNF
 #
 # BNF parser tokens, rules and closures are shown by show_bnf_parser_* options
 # 
-# tokens, rules and closures of the BNF grammar passed to Marpa::Easy are shown
+# tokens, rules and closures of the BNF grammar passed to MarpaX::Parse are shown
 # by show_bnf_* options
 # 
 # Finally, tokens, rules and closures of the input parsed by the BNF grammar passed 
-# to Marpa::Easy are shown # by show_* options
+# to MarpaX::Parse are shown # by show_* options
 #
 
 my $marpa_easy_options = {
@@ -165,18 +165,18 @@ my $marpa_easy_options = {
 };
 
 #
-# BNF parser needs to be package variable of Marpa::Easy
+# BNF parser needs to be package variable of MarpaX::Parse
 # to prevent repeated transformation of its rules
 #   
 # BNF parser grammar setup
-my $bnf_parser = Marpa::Easy->new({ 
-    rules => Marpa::Easy::BNF::rules,
+my $bnf_parser = MarpaX::Parse->new({ 
+    rules => MarpaX::Parse::BNF::rules,
     default_action => 'AoA',
 });
 
 # EBNF parser grammar setup
-my $ebnf_parser = Marpa::Easy->new({ 
-    rules => Marpa::Easy::EBNF::rules,
+my $ebnf_parser = MarpaX::Parse->new({ 
+    rules => MarpaX::Parse::EBNF::rules,
     default_action => 'AoA',
 });
 
@@ -202,7 +202,7 @@ sub build{
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
     
-    # extract Marpa::Easy options and set defaults
+    # extract MarpaX::Parse options and set defaults
     while (my ($option, $value) = each %$options){
         if (exists $marpa_easy_options->{$option}){
             $self->{$option} = $value;
@@ -318,7 +318,7 @@ sub _dump {
 
 #
 # get current options (as-passed), get rules from them, merge new rules, 
-# and rebuild Marpa::Easy
+# and rebuild MarpaX::Parse
 # 
 sub merge_token_rules { 
     
@@ -488,7 +488,7 @@ sub _bnf_to_rules
     my $bnf = shift;
     
     # parse bnf
-    my $bnf_tokens = Marpa::Easy::BNF->lex_bnf_text($bnf);
+    my $bnf_tokens = MarpaX::Parse::BNF->lex_bnf_text($bnf);
 
     # save bnf tokens
     $self->set_option('bnf_tokens', join "\n", map { join ': ', @$_ } @$bnf_tokens);
@@ -515,7 +515,7 @@ sub _ebnf_to_rules
 #    say Dump $ebnf;
     
     # parse ebnf
-    my $ebnf_tokens = Marpa::Easy::EBNF->lex_ebnf_text($ebnf);
+    my $ebnf_tokens = MarpaX::Parse::EBNF->lex_ebnf_text($ebnf);
     
 #    say "# EBNF tokens:\n", Dump $ebnf_tokens;
     
@@ -764,7 +764,7 @@ sub _set_default_action
     # if default action exists in this package then use it
     my $da = $options->{default_action};
     if (defined $da){
-        if (exists $Marpa::Easy::{$da}){
+        if (exists $MarpaX::Parse::{$da}){
             $options->{default_action} = __PACKAGE__ . '::' . $da;
         }
     }

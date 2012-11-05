@@ -5,7 +5,7 @@ use warnings;
 use YAML;
 use Test::More tests => 4;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # grammar
 my $grammar = q{
@@ -15,7 +15,7 @@ my $grammar = q{
     digit   ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 };
 
-my $bnf = Marpa::Easy->new({
+my $bnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'tree',
 });

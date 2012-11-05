@@ -5,7 +5,7 @@ use warnings;
 use YAML;
 use Test::More tests => 2;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # this is needed to test that only anonymous subs are extracted
 # and action names are left as is
@@ -48,7 +48,7 @@ sub do_what_I_mean {
     scalar @children > 1 ? \@children : shift @children;
 }
 
-my $me = Marpa::Easy->new({
+my $me = MarpaX::Parse->new({
     start => 'expr',
     rules => $rules,
     default_action => __PACKAGE__ . '::do_what_I_mean',
@@ -79,7 +79,7 @@ while ( defined( my $value_ref = $recognizer->value() ) ) {
     $value = $value_ref ? ${$value_ref} : 'No parse';
 }
 
-is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with Marpa::Easy and Marpa::R2::Recognizer";
+is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with MarpaX::Parse and Marpa::R2::Recognizer";
 ---
 -
   -
@@ -90,16 +90,16 @@ is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with Marpa::Easy
 END_OF_PARSE
 
 #
-# The same can be done with parse method of Marpa::Easy.
-# The default action AoA (array of arrays) will be set by Marpa::Easy.
+# The same can be done with parse method of MarpaX::Parse.
+# The default action AoA (array of arrays) will be set by MarpaX::Parse.
 #
-my $me_AoA = Marpa::Easy->new({
+my $me_AoA = MarpaX::Parse->new({
     rules => $rules
 });
 
 $value = $me_AoA->parse($number);
 
-is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with Marpa::Easy::parse";
+is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with MarpaX::Parse::parse";
 ---
 -
   -

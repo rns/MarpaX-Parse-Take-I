@@ -6,7 +6,7 @@ use Test::More tests => 1;
 use YAML;
 
 use 5.010;
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # this silences "Possible attempt to separate words with commas", among others
 no warnings;
@@ -94,7 +94,7 @@ my $reversed_diff = q{16a17,18
 < All rights reserved.
 };
 
-my $me = Marpa::Easy->new({
+my $me = MarpaX::Parse->new({
     rules => $rules,
     default_action => 'AoA',
 });

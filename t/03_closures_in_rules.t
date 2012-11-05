@@ -5,7 +5,7 @@ use warnings;
 use YAML;
 use Test::More tests => 5;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 # The below is BNF for decimal numbers, no literals
 #
@@ -14,7 +14,7 @@ use_ok 'Marpa::Easy';
 #    digits  ::= digit | digits digit
 #    digit   ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
-my $with_closures = Marpa::Easy->new({   
+my $with_closures = MarpaX::Parse->new({   
     rules   => [
         [ expr => [qw(- num)], sub { $_[1] . $_[2] } ],
         [ expr => [qw(num)],   sub { $_[1] } ],

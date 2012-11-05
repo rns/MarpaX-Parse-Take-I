@@ -1,4 +1,4 @@
-package Marpa::Easy::EBNF;
+package MarpaX::Parse::EBNF;
 
 use 5.010;
 use strict;

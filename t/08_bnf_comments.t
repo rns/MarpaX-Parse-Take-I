@@ -8,7 +8,7 @@ use Test::Differences;
 
 use YAML;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 # tokenize and parse BNF grammar with comments; preserve comments in actions
 
@@ -74,12 +74,12 @@ my $bnf_in_bnf = q{
     identifier ::= 'qr/\w+(\?|\*|\+)?/'
 };
 
-my $bnf = Marpa::Easy->new({
+my $bnf = MarpaX::Parse->new({
     rules => $bnf_in_bnf,
     default_action => 'AoA',
 });
 
-isa_ok $bnf, 'Marpa::Easy';
+isa_ok $bnf, 'MarpaX::Parse';
 
 my $expected_tokens =
 q{identifier: grammar

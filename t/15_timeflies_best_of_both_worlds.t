@@ -6,7 +6,7 @@ use Test::More;
 
 use YAML;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 #
 # This test case is borrowed from Jeffrey Kegler's Marpa::R2 distribution 
@@ -126,13 +126,13 @@ my $token_rules = join "\n", sort keys %token_rules;
 #
 # set up the grammar handling ambiguity with input model
 #
-my $mp_IM = Marpa::Easy->new({
+my $mp_IM = MarpaX::Parse->new({
     rules => $grammar . $token_rules,
     default_action => 'sexpr',
     ambiguity => 'input_model',
 });
 #say $mp_IM->show_rules;
-isa_ok $mp_IM, 'Marpa::Easy';
+isa_ok $mp_IM, 'MarpaX::Parse';
 
 my @input_model_parses = $mp_IM->parse( [ map { [ $_, $_ ] } grep { $_ } map { s/^\s+//; s/\s+$//; $_ } split /(\w+)/, $sentence ] );
 

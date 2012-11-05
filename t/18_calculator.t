@@ -39,7 +39,7 @@ use YAML;
 
 use Test::More;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # grammar
 my $calc = q{
@@ -84,7 +84,7 @@ for my $expr (
     ){
     say "\n# $expr";
     # set up the grammar
-    my $mp = Marpa::Easy->new({
+    my $mp = MarpaX::Parse->new({
         rules => $calc,
         default_action => 'tree',
 #        show_tokens => 1,

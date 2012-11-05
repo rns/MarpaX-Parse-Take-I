@@ -9,7 +9,7 @@ use YAML;
 use XML::Twig;
 use Tree::Simple;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 my $grammar = q{
 
@@ -79,7 +79,7 @@ my $numbers_and_series = [
 ];
 
 #
-# Note: show_parse_tree method of Marpa::Easy really helps with layout 
+# Note: show_parse_tree method of MarpaX::Parse really helps with layout 
 # and construction of accessor expressions in a multileve data structure
 #
 
@@ -256,7 +256,7 @@ my $tree_traversers = {
 for my $tree_type (sort keys %$tree_traversers){
     
     # set up grammar
-    my $mp = Marpa::Easy->new({ # Marpa::Parser
+    my $mp = MarpaX::Parse->new({ # Marpa::Parser
         rules           => $tree_type eq "actions" ? $grammar_with_actions : $grammar,
         default_action  => $tree_type eq "actions" ? undef : $tree_type,
     });

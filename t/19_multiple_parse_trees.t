@@ -8,7 +8,7 @@ use Test::More;
 
 use Test::Differences;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # grammar
 my $calc = q{
@@ -28,7 +28,7 @@ my $calc = q{
 };
 
 # set up the grammar
-my $mp = Marpa::Easy->new({
+my $mp = MarpaX::Parse->new({
     rules => $calc,
     default_action => 'tree',
 });

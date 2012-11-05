@@ -1,4 +1,4 @@
-package Marpa::Easy::BNF;
+package MarpaX::Parse::BNF;
 
 use 5.010;
 use strict;

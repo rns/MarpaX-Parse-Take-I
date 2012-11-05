@@ -6,7 +6,7 @@ use YAML;
 
 use Test::More;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # grammar
 my $grammar = q{
@@ -25,7 +25,7 @@ my $grammar = q{
 my $number = '-1234.423'; 
 
 # set up the grammar
-my $mp = Marpa::Easy->new({
+my $mp = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'sexpr',
 });
@@ -43,7 +43,7 @@ is $mp->show_recognition_failures, $expected_recognition_failures, "recognitions
 
 }
 
-my $mp1 = Marpa::Easy->new({
+my $mp1 = MarpaX::Parse->new({
     rules => q{
         Expression  ::= Term | Term Op Term
         Term        ::= Factor+

@@ -6,7 +6,7 @@ use Test::More;
 
 use YAML;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 #
 # This test case is borrowed from Jeffrey Kegler's Marpa::R2 distribution 
@@ -118,7 +118,7 @@ my $sentence = 'time flies like an arrow, but fruit flies like a banana';
 #
 # set up the grammar handling ambiguity with input model
 #
-my $mp_IM = Marpa::Easy->new({
+my $mp_IM = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'sexpr',
     ambiguity => 'input_model',
@@ -127,13 +127,13 @@ my $mp_IM = Marpa::Easy->new({
 #
 # set up the grammar handling ambiguity with ambiguous tokens
 #
-my $mp_AT = Marpa::Easy->new({
+my $mp_AT = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'sexpr',
     ambiguity => 'tokens',
 });
 
-isa_ok $mp_IM, 'Marpa::Easy';
+isa_ok $mp_IM, 'MarpaX::Parse';
 
 # we know we want multiple parses, hence the array context of ->parse
 my @input_model_parses = $mp_IM->parse( tokenize($sentence) );

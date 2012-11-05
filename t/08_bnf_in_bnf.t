@@ -6,13 +6,13 @@ use Test::More tests => 6;
 
 use YAML;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 =head1 Test Scheme
 
 BNF in BNF:
 
-    (1) Marpa::Easy->new will parse textual BNF to produce a Marpa grammar able to parse BNF grammars;
+    (1) MarpaX::Parse->new will parse textual BNF to produce a Marpa grammar able to parse BNF grammars;
 
     (2) That Marpa grammar will parse the decimal numbers BNF grammar and produce a Marpa grammar able to parse decimal numbers; and
 
@@ -117,12 +117,12 @@ my $bnf_in_bnf = q{
     
 };
 
-my $bnf_bnf = Marpa::Easy->new({
+my $bnf_bnf = MarpaX::Parse->new({
     rules => $bnf_in_bnf,
     default_action => 'AoA',
 });
 
-isa_ok $bnf_bnf, 'Marpa::Easy';
+isa_ok $bnf_bnf, 'MarpaX::Parse';
 
 # example grammar (comments are not supported yet)
 my $decimal_numbers_grammar = q{
@@ -135,7 +135,7 @@ my $decimal_numbers_grammar = q{
 my $decimal_number_rules = $bnf_bnf->parse($decimal_numbers_grammar);
 
 # set up decimal number bnf
-my $decimal_number_bnf = Marpa::Easy->new({
+my $decimal_number_bnf = MarpaX::Parse->new({
     rules => $decimal_number_rules,
     default_action => 'xml',
 });

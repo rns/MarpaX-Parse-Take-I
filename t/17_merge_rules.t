@@ -6,7 +6,7 @@ use YAML;
 
 use Test::More;
 
-use Marpa::Easy;
+use MarpaX::Parse;
 
 # grammar
 # these rules will be added first
@@ -30,7 +30,7 @@ my $terminals = q{
 my $number = '-1234.423'; 
 
 # set up the grammar
-my $mp = Marpa::Easy->new({
+my $mp = MarpaX::Parse->new({
     rules => $non_terminals,
     default_action => 'sexpr',
 });

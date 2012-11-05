@@ -6,7 +6,7 @@ use Test::More tests => 6;
 
 use YAML;
 
-use_ok 'Marpa::Easy';
+use_ok 'MarpaX::Parse';
 
 my $grammar = q{
 
@@ -19,7 +19,7 @@ my $grammar = q{
     
 };
 
-my $ebnf = Marpa::Easy->new({
+my $ebnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'AoA_with_rule_signatures',
     ebnf => 1,
@@ -30,7 +30,7 @@ my $ebnf = Marpa::Easy->new({
 
 say $ebnf->show_rules;
 
-isa_ok $ebnf, 'Marpa::Easy';
+isa_ok $ebnf, 'MarpaX::Parse';
 
 my $expressions = [
 # numbers
