@@ -22,18 +22,12 @@ my $subrule_no  = 0;
 
 my $ebnf_rules = [
     
+    # grammar ::= production+
     [ grammar => [qw( production+ )], sub {
-        shift;
-        my $rules = [];
-        my @productions = @_;
-        for my $production (@productions){
-            for my $Marpa_rules (@$production){
-                push @$rules, @$Marpa_rules;
-            }
-        }
-        $rules;
+        return @{ $_[1] } > 1 ? [ map { @$_ } @{ $_[1] } ] : $_[1];
     } ],
-
+    
+    # production ::= lhs '::=' rhs
     [ production => [qw( lhs ::= rhs )], 
         sub {
             shift;
@@ -81,34 +75,40 @@ my $ebnf_rules = [
         }
     ],
     
+    # lhs ::= symbol
     [ lhs => [qw( symbol )] ],
     
+    # rhs ::= term ('|' term)*
     { lhs => 'rhs', rhs => ['term'], min => 1, separator => '|', proper => 1, action =>
         sub {
             shift;
             { alternation => \@_ }
         }
     },
-
+    
+    # term ::= factor+
     { lhs => 'term', rhs => ['factor'], min => 1, proper => 1, action =>
         sub {
             shift;
             { sequence => \@_ }
         }
     },
-
+    
+    # factor ::= symbol
     [ factor => [qw(     symbol )], 
         sub { 
             { symbol => $_[1] }
         } 
     ], 
-
+    
+    # factor ::= symbol quantifier
     [ factor => [qw(     symbol quantifier )], 
         sub { 
             { symbol => "$_[1]$_[2]"  }
         } 
     ], 
     
+    # factor ::= '(' rhs ')'
     [ factor => [qw( '(' rhs ')' )], 
         sub { 
             my $subrule = $_[2]; #{ symbols => $_[2] };
