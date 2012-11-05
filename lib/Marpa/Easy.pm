@@ -517,7 +517,7 @@ sub _ebnf_to_rules
     # parse ebnf
     my $ebnf_tokens = Marpa::Easy::EBNF->lex_ebnf_text($ebnf);
     
-#    say Dump $ebnf_tokens;
+#    say "# EBNF tokens:\n", Dump $ebnf_tokens;
     
     # save ebnf tokens
     $self->set_option('ebnf_tokens', join "\n", map { join ': ', @$_ } @$ebnf_tokens);
@@ -534,6 +534,8 @@ sub _ebnf_to_rules
 #    say "# parsing EBNF";
 #    say $ebnf_parser->show_rules;
     my $rules = $ebnf_parser->parse($ebnf_tokens);
+    
+#    say Dump $rules;
     
     return $rules;
 }
@@ -690,7 +692,7 @@ sub _quantifiers_to_rules
 
             my @nullables = sort keys %{ $nullable_symbol_indices->{$j} };
             for my $nullable (@nullables){
-                say $rhs->[$nullable];
+#                say $rhs->[$nullable];
                 push @$rules, [ $rhs->[$nullable] => [] ];
             }
         }
@@ -1115,7 +1117,7 @@ sub show_parse_tree{
     my $format = shift || 'text';
     
     # handle multiple parses
-    if (ref $tree eq "ARRAY" and $self->{multiple_parse_trees} 
+    if (ref $tree eq "ARRAY" and $self->{multiple_parse_trees} > 1
         and $self->{default_action} ne __PACKAGE__ . '::AoA_with_rule_signatures'){
         my $trees = '';
         for my $i (0..@$tree-1){

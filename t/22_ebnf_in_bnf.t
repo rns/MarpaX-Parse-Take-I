@@ -13,19 +13,33 @@ my $ebnf_in_bnf = q{
   grammar       ::= production+
   production    ::= lhs '::=' rhs
 
-  lhs           ::= symbol
-  rhs           ::= 
-        term            %{ [ $_[1] ] %} 
-    |   term '|' rhs    %{ unshift @{ $_[3] }, $_[1]; $_[3] %}
+  lhs ::= symbol
+
+  rhs ::= 
+
+    term
+
+        %{ [ $_[1] ] %} |
+
+    term '|' rhs
+
+        %{ unshift @{ $_[3] }, $_[1]; $_[3] %}
+        
   term          ::= factor+ action?
+
   action        ::= 'qr/%{.+?%}/'
 
   factor        ::= 
-        symbol quantifier? 
-    | '(' rhs ')' quantifier? 
-    | '(' identifier ':' rhs ')' quantifier? 
+
+    symbol | 
+    '(' rhs ')' |
+    '(' identifier ':' rhs ')'
+  
+  factor        ::= factor quantifier 
+  factor        ::= factor action
     
   quantifier    ::= '?' | '*' | '+' 
+
   symbol        ::= identifier | literal
   identifier    ::= 'qr/[\w\d\-]+/'
   literal       ::= 'qr/".+?"/' | "qr/'.+?'/"
@@ -44,11 +58,22 @@ say $ebnf_bnf->show_rules;
 
 # example grammar (comments are not supported yet)
 my $arithmetic = q{
-    expression  ::= term  ( ( '+' | '-' ) term )* %{ expression-action %}
-    term        ::= factor  ( ( '*' | '/' ) factor)*
+    expression  ::= 
+
+        term                            
+
+            %{ term-action %}           
+
+        ( (AddSubOp: '+' | '-' ) %{ term-op named subrule action %} term )* 
+            
+            %{ *-factor-action %} 
+            
+        %{ expression-action %}
+        
+    term        ::= factor  ( (MulDivOp: '*' | '/' ) factor)*
     factor      ::= constant | variable | '('  expression  ')'
     variable    ::= 'x' | 'y' | 'z'
-    constant    ::= digit+ ('.' digit+)?
+    constant    ::= digit+ (frac:'.' digit+)?
     digit       ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' %{ 9-action %}
 };
 
@@ -59,7 +84,8 @@ say $ebnf_bnf->show_parse_tree;
 # set up decimal number bnf
 my $arithmetic_bnf = Marpa::Easy->new({
     rules => $arithmetic_rules,
-    default_action => 'AoA',
+    default_action => 'AoA_with_rule_signatures',
+    show_bnf_tokens => 1,
 });
 
 # test decimal number bnf
@@ -76,8 +102,6 @@ my $expressions = [
     '((x + 1) / 4) + 2',
     '(x + y) / z) + 2'
 ];
-
-use XML::Twig;
 
 for my $expr (@$expressions){
 

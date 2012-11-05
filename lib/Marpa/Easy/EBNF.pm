@@ -24,6 +24,8 @@ my $ebnf_rules = [
     
     # grammar ::= production+
     [ grammar => [qw( production+ )], sub {
+        say Dump \@_;
+        say scalar @{ $_[1] };
         return @{ $_[1] } > 1 ? [ map { @$_ } @{ $_[1] } ] : $_[1];
     } ],
     
@@ -34,14 +36,14 @@ my $ebnf_rules = [
             
             my ($lhs, undef, $rhs) = @_;
             
-            my $rules;
+            my $rules = [];
             
 #            say "=-" x 32;
 #            say "# adding\n";
 
-#            say "# production/lhs\n", $lhs;
-#            say "# production/rhs\n", Dump $rhs;
-#            say "# subrules\n", Dump \%subrules;
+            say "# production/lhs\n", $lhs;
+            say "# production/rhs\n", Dump $rhs;
+            say "# subrules\n", Dump \%subrules;
             
             # add rule
 #            say "# rule:\n$lhs\n", Dump $rhs;
@@ -50,7 +52,7 @@ my $ebnf_rules = [
             my $qnt = $rhs->{quantifier};
             for my $seq ( map { $_->{sequence} } @$alt ){
                 my @symbols = map { ref $_ eq "HASH" ? $_->{symbol} : "$lhs$_" } @$seq;
-#                say "$lhs -> @symbols";
+                say "$lhs -> @symbols";
                 push @$rules, [ $lhs, \@symbols ];
             }            
             
@@ -62,7 +64,7 @@ my $ebnf_rules = [
                     my @symbols = map { ref $_ eq "HASH" ? $_->{symbol} : "$lhs$_" } @$seq;
                     # remove quantifiers
                     $subrule_lhs =~ s/\?|\*|\+//;
-#                    say "$lhs$subrule_lhs -> @symbols";
+                    say "$lhs$subrule_lhs -> @symbols";
                     push @$rules, [ "$lhs$subrule_lhs", \@symbols ];
                 }            
             }
