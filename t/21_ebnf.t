@@ -2,7 +2,7 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More;
 
 use YAML;
 
@@ -35,8 +35,24 @@ Wirth
 =cut
 
 for my $data (
-    [ 'rule ::= sym1 sym2 rule1', '' ],
-    [ 'rule ::= sym1 sym2 rule1 rule1 ::= sym1', '' ],
+[ 
+    q{ r ::= s1 s2 r1 }, <<EOT
+0: r -> s1 s2 r1
+EOT
+],
+
+[ 
+    q{ r ::= s1 s2 r1 r1 ::= s1 }, <<EOT
+0: r -> s1 s2 r1
+1: r1 -> s1
+EOT
+],
+
+[ q{ 
+    s ::= x ( (, x) | (,? conj x) )* 
+#    s1 ::= x ( (, x) | (,? conj x) )*
+}, '' ],
+    
     ){
     my ($grammar, $rules) = @$data;
 
@@ -45,7 +61,11 @@ for my $data (
         ebnf => 1,
 #        show_tokens => 1,
     });
-
-    say $ebnf->show_rules;
+    
+    my $got_rules = $ebnf->show_rules;
+    unless (is "$got_rules\n", $rules, "parsed $grammar"){
+        say $got_rules;
+    }
 }
 
+done_testing;
