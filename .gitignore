@@ -3,5 +3,5 @@ bak/
 bin/
 doc/
 pod/
-
 etc/
+*.bak
