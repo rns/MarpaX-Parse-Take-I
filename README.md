@@ -4,10 +4,7 @@ MarpaX::Parse
 What It Is
 ----------
 
-This module is an attempt at providing an easy-to-use interface 
-to Marpa::R2.
-
-"Easy-to-use" currently means that a user can:
+This module is an attempt at providing a simple and powerful parsing interface to Marpa::R2 so that a user can:
 
 * call `parse` method on the input and receive the value produced by Marpa::R2 evaluator or a  by actions or closures set in `rules`
 * use closures (`sub { ... }`) in Marpa::R2::Grammar rules,
