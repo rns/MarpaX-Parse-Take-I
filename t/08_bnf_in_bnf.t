@@ -8,21 +8,21 @@ use YAML;
 
 use_ok 'Marpa::Easy';
 
-=head1 test design
+=head1 Test Scheme
 
-Along the lines of BNF syntax in BNF:
+BNF in BNF:
 
-    (1) Marpa::Easy->new will parse BNF to produce a Marpa grammar able to parse BNF grammars;
+    (1) Marpa::Easy->new will parse textual BNF to produce a Marpa grammar able to parse BNF grammars;
 
-    (2) The BNF Marpa grammar will parse the decimal numbers grammar and produce a Marpa grammar able to parse decimal numbers; and
+    (2) That Marpa grammar will parse the decimal numbers BNF grammar and produce a Marpa grammar able to parse decimal numbers; and
 
     (3) That decimal numbers Marpa grammar will parse decimal numbers
     
     The grammar below has rules with quantifiers
     
-        rule    ::= symbol+ action? 
+        rule    ::= symbol+ | symbol+ action
     
-    and recursive sequence with proper separators because BNF (unilke EBNF) has no brackets for grouping
+    and recursive sequence with proper separators because BNF (unlike EBNF) has no brackets for grouping
     
         rules   ::= rule | rule '|' rules   
     
@@ -39,22 +39,21 @@ my $bnf_in_bnf = q{
         %{
             use Eval::Closure;
             
-#            say "# production:\n", Dump \@_;
             my $lhs = $_[1];
             my @rhs = @{ $_[3] };
             my $rules = [];
-#            say "\n# lhs:\n", $lhs;
+
             for my $rhs (@rhs){
-#                say "# rhs:\n", Dump $rhs;
+
                 my ($symbols, $action ) = map { $rhs->{$_} } qw{ symbols action };
-#                say "# symbols:\n", Dump $symbols;
                 $symbols = ref $symbols eq "ARRAY" ? $symbols : [ $symbols ];
+
                 my $rule = {
                     lhs => $lhs,
                     rhs => $symbols,
                 };
+
                 if (defined $action){
-#                    say "# action:\n", Dump $action;
                     my $closure = eval_closure(
                         source => $action,
                         description => 'action of rule ' . $rule_signature,
@@ -160,10 +159,9 @@ for my $number (@$numbers){
     my $t = XML::Twig->new;
     $t->parse($xml);
 
-    # "Each parse tree represents a string of terminals s, which we call Yield of a tree the yield of the tree.
-    # The string s consists of the labels of the leaves of the tree, in left-to-right order." 
-    # — http://i.stanford.edu/~ullman/focs/ch11.pdf
-    # so this is the easiest way to get the input back
+=item
+    Each parse tree represents a string of terminals s, which we call Yield of a tree the yield of the tree. The string s consists of the labels of the leaves of the tree, in left-to-right order. — http://i.stanford.edu/~ullman/focs/ch11.pdf
+=cut
     my $deparsed_number = $t->root->text;
 
     # test
