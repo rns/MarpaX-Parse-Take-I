@@ -32,8 +32,8 @@ my $bnf_in_bnf = q{
 
     grammar    ::= production+
         %{
-            # flatten array of arrays
-            [ map { @$_ } @{ $_[1] } ];
+            # flatten array of arrays unless it has only one item
+            return @{ $_[1] } > 1 ? [ map { @$_ } @{ $_[1] } ] : $_[1];
         %}
     production ::= lhs '::=' rhs
         %{
