@@ -211,7 +211,6 @@ sub build{
     }
     # set defaults
     $self->{quantifier_rules}               //= 'sequence';
-    $self->{nullable_quantified_symbols}    //= 1;
     $self->{ambiguity}                      //= 'input_model';
     $self->{recognition_failure_sub}        //= \&recognition_failure;
     
@@ -269,7 +268,7 @@ sub build{
     
     # set start to lhs of the first rule if not set
     if (not exists $options->{start}){
-        $options->{start} = _extract_start_symbol( \@rules );
+        $options->{start} = $self->_extract_start_symbol( \@rules );
     }
 
     # save transformed rules for further adding to them 
@@ -673,7 +672,7 @@ sub _quantifiers_to_rules
     push @$rules, @$quantified_symbol_rules;
 
     # just add [ nullable_symbol => [] ] rules if the options are set
-    if ($self->{nullable_quantified_symbols} and $self->{quantifier_rules} eq 'recursive'){
+    if ($self->{nullable_quantified_symbols}){
         my @nullables;
         my %nullables;
         for my $j (keys %$nullable_symbol_indices){
@@ -749,11 +748,14 @@ sub _quantifiers_to_rules
 
 sub _extract_start_symbol
 {
+    my $self = shift;
+    
     my $rules = shift;
     
     my $rule0 = $rules->[0];
     
     my $start = ref $rule0 eq "HASH" ? $rule0->{lhs} : $rule0->[0];
+    $self->{start} = $start;
     
     return $start;
 }
@@ -1114,62 +1116,74 @@ sub xml {
         . "</$lhs>";
 }
 
+sub show_parse_forest{
+    my $self = shift;
+    my $format = shift || 'text';
+
+    # POSSIBLE TODO: use start symbol to denote parse trees, if we extracted one
+    my $header = 'Parse Tree'; # $self->{start} 
+
+    my $forest = '';
+    for my $i (0..@{$self->{parse_forest}}-1){
+        $forest .= join '',
+            "# $header ", $i + 1, ":\n" ,
+            $self->show_parse_tree($self->{parse_forest}->[$i], $format) , 
+            "\n";
+    }
+    chomp $forest;
+    return $forest;
+}
+
 sub show_parse_tree{
     my $self = shift;
     my $tree = shift || $self->{parse_tree};
     my $format = shift || 'text';
     
-    # handle multiple parses
-    if (ref $tree eq "ARRAY" and $self->{multiple_parse_trees} > 1
-        and $self->{default_action} ne __PACKAGE__ . '::AoA_with_rule_signatures'){
-        my $trees = '';
-        for my $i (0..@$tree-1){
-            $trees .= "# Parse Tree @{[$i+1]}:\n" . $self->show_parse_tree($tree->[$i], $format) . "\n";
-        }
-        chomp $trees;
-        return $trees;
-    }
-    else{
-        # tree proper
-        if (ref $tree eq "Tree::Simple"){
-            given ($format){
-                when ("text"){
-                    return DumpTree( 
-                            $tree, $tree->getNodeValue,
-                            DISPLAY_ADDRESS => 0,
-                            DISPLAY_OBJECT_TYPE => 0,
-                            FILTER => \&filter
-                        );
-                }
-                when ("html"){
-                    my $tree_view = Tree::Simple::View::HTML->new($tree);    
-                    return $tree_view->expandAll();
-                }
-                when ("dhtml"){
-                    my $tree_view = Tree::Simple::View::DHTML->new($tree);    
-                    return 
-                          $tree_view->javascript()
-                        . $tree_view->expandAll();
-                }
+#    say Dump $tree;
+    
+    # if we have not $tree passed and there is a parse forest,
+    # then show_parse_forest in default format 
+    return $self->show_parse_forest if not defined $tree and $self->{parse_forest};
+    
+    # tree proper
+    if (ref $tree eq "Tree::Simple"){
+        given ($format){
+            when ("text"){
+                return DumpTree( 
+                        $tree, $tree->getNodeValue,
+                        DISPLAY_ADDRESS => 0,
+                        DISPLAY_OBJECT_TYPE => 0,
+                        FILTER => \&filter
+                    );
+            }
+            when ("html"){
+                my $tree_view = Tree::Simple::View::HTML->new($tree);    
+                return $tree_view->expandAll();
+            }
+            when ("dhtml"){
+                my $tree_view = Tree::Simple::View::DHTML->new($tree);    
+                return 
+                      $tree_view->javascript()
+                    . $tree_view->expandAll();
             }
         }
-        # data structure
-        elsif (ref $tree ~~ [ "ARRAY", "HASH" ] ){
-            return DumpTree($tree, "tree",
-                DISPLAY_ADDRESS => 0,
-                DISPLAY_OBJECT_TYPE => 0,
-            )
-        }
-        # utf8 string, must be XML
-        elsif (is_utf8($tree) and index ($tree, "<\?xml/") >= 0) {
-            my $t = XML::Twig->new(pretty_print => 'indented');
-            $t->parse($tree);
-            return $t->sprint;
-        }
-        # mere scalar
-        else{
-            return $tree;
-        }
+    }
+    # data structure
+    elsif (ref $tree ~~ [ "ARRAY", "HASH" ] ){
+        return DumpTree($tree, "tree",
+            DISPLAY_ADDRESS => 0,
+            DISPLAY_OBJECT_TYPE => 0,
+        )
+    }
+    # utf8 string, must be XML
+    elsif (is_utf8($tree) and index ($tree, "<\?xml/") >= 0) {
+        my $t = XML::Twig->new(pretty_print => 'indented');
+        $t->parse($tree);
+        return $t->sprint;
+    }
+    # mere scalar
+    else{
+        return $tree;
     }
 }
 
@@ -1454,17 +1468,14 @@ sub parse{
         # save parse to test for uniqueness
         $values{$value_dump} = undef;
     }
-    # TODO: replace recursion in show_parse_tree with loop
-    # $self->{parse_tree} shall always be array 
-    $self->{multiple_parse_trees} = scalar @values - 1;
     
-    # set up the return value and parse tree reference    
+    # set up the return value and parse tree/forest reference    
     if (wantarray){         # mupltiple parses are expected
-        $self->{parse_tree} = \@values;
+        $self->{parse_forest} = \@values;
         return @values;
     }
     elsif (@values > 1){    # single parse is expected, but we have many, 
-        $self->{parse_tree} = \@values;
+        $self->{parse_forest} = \@values;
         return \@values;    # hence the array ref
     }
     else {
