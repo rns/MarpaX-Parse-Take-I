@@ -20,6 +20,66 @@ sub new
 my %subrules    = ();
 my $subrule_no  = 0;
 
+=pod
+  rhs ::= 
+
+    term action?
+        %{ 
+            shift;
+
+#            say "# $rule_signature:\n", Dump \@_;
+
+            my @value = grep { defined } @_;
+            my $term = { alternation => [ shift @value ] };
+            push @{ $term->{alternation}->[0]->{sequence} }, $value[0] if ref $value[0] eq "HASH" and exists $value[0]->{action};
+            
+#            say "# $rule_signature (value):\n", Dump $term;
+            
+            $term;
+        %}
+        |
+
+    term action? '|' rhs
+        %{ 
+            shift;
+#            say "# $rule_signature:\n", Dump \@_;
+            
+            my @value = grep { defined } @_;
+            
+            # extract and set up the term
+            my $term = shift @value;
+            # extract rhs
+            my $rhs = pop @value;
+            # extract '|';
+            pop @value;
+            # extract action, if any
+            $term->{action} = $value[0]->{action} if ref $value[0] eq "HASH" and exists $value[0]->{action};
+            # prepend term to rhs
+            unshift @{ $rhs->{alternation} }, $term; 
+            
+#            say "# $rule_signature (value):\n", Dump $rhs;
+            
+            $rhs
+        %}
+
+  term ::= 
+    
+    factor
+        %{ 
+            shift;
+#            say "# $rule_signature:\n", Dump \@_;
+            { sequence => [ $_[0] ] } 
+        %}
+        |
+    term factor
+        %{ 
+            shift;
+#            say "# $rule_signature:\n", Dump \@_;
+            push @{ $_[0]->{sequence} }, $_[1]; 
+            $_[0]
+        %}
+=cut
+
 my $ebnf_rules = [
     
     # grammar ::= production+
@@ -80,6 +140,7 @@ my $ebnf_rules = [
     # lhs ::= symbol
     [ lhs => [qw( symbol )] ],
     
+    # see new rules above
     # rhs ::= term ('|' term)*
     { lhs => 'rhs', rhs => ['term'], min => 1, separator => '|', proper => 1, action =>
         sub {
@@ -109,8 +170,9 @@ my $ebnf_rules = [
             { symbol => "$_[1]$_[2]"  }
         } 
     ], 
-    
+
     # factor ::= '(' rhs ')'
+    # '(' rhs ')' quantifier? action?
     [ factor => [qw( '(' rhs ')' )], 
         sub { 
             my $subrule = $_[2]; #{ symbols => $_[2] };
@@ -123,6 +185,8 @@ my $ebnf_rules = [
             $prov_lhs;
         }
     ], 
+
+    # '(' identifier ':' rhs ')' quantifier? action?
     [ factor => [qw( '(' rhs ')' quantifier )], 
         sub { 
             my $subrule = $_[2];
