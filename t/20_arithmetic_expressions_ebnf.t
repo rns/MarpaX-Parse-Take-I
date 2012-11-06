@@ -23,7 +23,6 @@ my $ebnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'AoA',
     ebnf => 1,
-#    show_tokens => 1,
     quantifier_rules => 'recursive',
     nullables_for_quantifiers => 1,
 });
