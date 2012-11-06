@@ -156,7 +156,7 @@ my $marpa_easy_options = {
     
     # if true, nullable symbols will be added instead removing the rules 
     # with ?/*-quanfitied symbols
-    nullable_quantified_symbols => undef,
+    nullables_for_quantifiers => undef,
     
     # handle ambuous tokens with input model (alternate()/earleme_complete()
     ambiguity => undef,
@@ -672,7 +672,7 @@ sub _quantifiers_to_rules
     push @$rules, @$quantified_symbol_rules;
 
     # just add [ nullable_symbol => [] ] rules if the options are set
-    if ($self->{nullable_quantified_symbols}){
+    if ($self->{nullables_for_quantifiers}){
         my @nullables;
         my %nullables;
         for my $j (keys %$nullable_symbol_indices){
