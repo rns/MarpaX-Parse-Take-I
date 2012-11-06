@@ -52,7 +52,6 @@ for my $expression (@$expressions){
     my $value = $ebnf->parse($expression);
     
     unless (is $value, $expression, "expression $expression lexed and parsed with EBNF"){
-        say Dump $value;
-#        say $ebnf->show_parse_tree;
+        say $ebnf->show_parse_tree;
     }
 }
