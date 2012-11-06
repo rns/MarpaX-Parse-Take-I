@@ -24,8 +24,8 @@ my $ebnf_in_bnf = q{
             }
     #        say Dump \@_;
     #        \@_;
-            # FIXME: this is because the inner closure in the action of the next rule
-            # is get called twice
+            # FIXME: the inner closure in the action of the next rule
+            # is get called twice when actions are available
             $rules; 
         %}
   
