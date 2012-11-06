@@ -29,16 +29,16 @@ my $ebnf_in_bnf = q{
             my $rules = [];
             my $closures = {};
             
-            # extract production action, if any
-            my $production_action;
-            if (ref $value[-1] eq "HASH" and exists $value[-1]->{action}){
-                $production_action = (pop @value)->{action};
-            }
-
             # set up Marpa::R2 rules
-            my ($lhs, undef, $rhs) = @value;
+            my ($lhs, undef, $rhs, $production_action) = @value;
             say "# production/lhs:\n$lhs";
             say "# production/rhs:\n", Dump $rhs;
+
+            # extract production action, if any
+            if (ref $production_action eq "HASH" and exists $production_action->{action}){
+                $production_action = $production_action->{action};
+                say "production_action: $production_action";
+            }
 
             sub make_rule{
                 my ($lhs, $rhs, $lhs_action) = @_;
@@ -88,12 +88,12 @@ my $ebnf_in_bnf = q{
             push @$rules, @$rule;
             # add $%rule_clocures to %$closures to be added to the respective rules
             # after they are set up
-            say "closures to be added", Dump $subrule_closures;
+            say "# subrule closures to be added:\n", Dump $subrule_closures;
             $closures->{$_} = $subrule_closures->{$_} for keys %$subrule_closures;
             
             # add subrules, if any
             if ( exists $per_parse->{subrules} and defined $per_parse->{subrules} ){
-#                say "# subrules:\n", Dump $per_parse->{subrules};
+                say "# subrules:\n", Dump $per_parse->{subrules};
                 for my $subrule_lhs (keys %{ $per_parse->{subrules} }){
                     my ($rule, $subrule_closures) = make_rule(
                         $subrule_lhs =~ /^__/ ? $lhs . $subrule_lhs : $subrule_lhs, 
@@ -114,7 +114,7 @@ my $ebnf_in_bnf = q{
             say Dump $rules;
             # add closures to the rules, whose rhs contains the symbol
             for my $symbol (keys %$closures){
-                say "subrule closure to be added: ", $symbol, ' -> ', $closures->{$symbol};
+                say "# subrule closure to be added:\n", $symbol, ' -> ', $closures->{$symbol};
             }            
             
 #            \@_;
@@ -125,22 +125,45 @@ my $ebnf_in_bnf = q{
 
   rhs ::= 
 
-    term
+    term action?
         %{ 
             shift;
+
 #            say "# $rule_signature:\n", Dump \@_;
-            { alternation => [ $_[0] ] } 
+
+            my @value = grep { defined } @_;
+            my $term = { alternation => [ shift @value ] };
+            push @{ $term->{alternation}->[0]->{sequence} }, $value[0] if ref $value[0] eq "HASH" and exists $value[0]->{action};
+            
+#            say "# $rule_signature (value):\n", Dump $term;
+            
+            $term;
         %}
         |
 
-    term '|' rhs
+    term action? '|' rhs
         %{ 
             shift;
 #            say "# $rule_signature:\n", Dump \@_;
-            unshift @{ $_[2]->{alternation} }, $_[0]; 
-            $_[2]
+            
+            my @value = grep { defined } @_;
+            
+            # extract and set up the term
+            my $term = shift @value;
+            # extract rhs
+            my $rhs = pop @value;
+            # extract '|';
+            pop @value;
+            # extract action, if any
+            $term->{action} = $value[0]->{action} if ref $value[0] eq "HASH" and exists $value[0]->{action};
+            # prepend term to rhs
+            unshift @{ $rhs->{alternation} }, $term; 
+            
+#            say "# $rule_signature (value):\n", Dump $rhs;
+            
+            $rhs
         %}
-        
+
   term ::= 
     
     factor
@@ -165,35 +188,38 @@ my $ebnf_in_bnf = q{
         
   factor        ::= 
 
-    symbol quantifier? action?
+# symbols can have actions only if they are non-terminals
+    symbol quantifier? # action?
         %{ 
             shift;
 
             my @value = grep { defined } @_;
-            say "# $rule_signature:\n", Dump \@value;
+#            say "# $rule_signature:\n", Dump \@value;
 #            return @value > 1 ? \@value : shift @value;
             
             # extract quantifier and action
             my @quantifier = map { $_->{quantifier} } grep { ref eq "HASH" and exists $_->{quantifier} } @value;
-            my @action     = map { $_->{action}      } grep { ref eq "HASH" and exists $_->{action} } @value;
+#            my @action     = map { $_->{action}      } grep { ref eq "HASH" and exists $_->{action} } @value;
 
             # set up factor
             my $factor = { symbol => $value[0] };
 
             # add quantifier and action, if any, to the factor
-            $factor->{action}   = shift @action if @action;
+#            $factor->{action}  = shift @action if @action;
             $factor->{symbol} .= shift @quantifier if @quantifier;
 
             # return factor
             $factor;
         %} 
         |
+# symbols can have actions only if they are non-terminals
+# subexpressions are, so they can
     '(' rhs ')' quantifier? action?
         %{ 
             my $per_parse = shift; # per-parse var
 
             my @value = grep { defined } @_;
-            say "# $rule_signature:\n", Dump \@value;
+#            say "# $rule_signature:\n", Dump \@value;
 #            return @value > 1 ? \@value : shift @value;
             
             # extract quantifier and action
@@ -220,12 +246,14 @@ my $ebnf_in_bnf = q{
             $factor;
         %}
         |
+# symbols can have actions only if they are non-terminals
+# named subexpressions are, so they can
     '(' identifier ':' rhs ')' quantifier? action?
         %{ 
             my $per_parse = shift; # per-parse var
 
             my @value = grep { defined } @_;
-            say "# $rule_signature:\n", Dump \@value;
+#            say "# $rule_signature:\n", Dump \@value;
 #            return @value > 1 ? \@value : shift @value;
             
             # extract quantifier and action
@@ -279,25 +307,27 @@ isa_ok $ebnf_bnf, 'MarpaX::Parse';
 
 
 # example grammar (comments are not supported yet)
+# actions can be defined for symbols that are re-written to 
+# separate rules, such as groups (in parens), alternatives, and 
+# whole productions, e.g. %{ action(<add_sub_op>) %}, 
+# %{ action(<'9'>) %}, and %{ action(<digit>) %}, accordingly
 my $arithmetic = q{
 
     expression  ::= 
 
         term                            
 
-            %{ action of symbol 'term' %}           
-
-        ( (add_sub_op: '+' | '-' ) %{ action of subrule 'add_sub_op' %} term )* 
+        ( (add_sub_op: '+' | '-' ) %{ action(<add_sub_op>) %} term )* 
             
-            %{ action of ()*subrule %} 
+            %{ action(anonymous subrule <()*>) %} 
             
-        %{ expression-action %}
+        %{ action(expression) %}
         
-    term        ::= factor  ( (mul_div_op: '*' | '/' ) %{ action of 'mul_div_op' %} factor)*
+    term        ::= factor  ( (mul_div_op: '*' | '/' ) %{ action of <mul_div_op> %} factor)*
     factor      ::= constant | variable | '('  expression  ')'
     variable    ::= 'x' | 'y' | 'z'
     constant    ::= digit+ (frac:'.' digit+)?
-    digit       ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' %{ action of '9' %} %{ action of 'digit' %}
+    digit       ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' %{ action(<'9'>) %} %{ action(<digit>) %}
     
 };
 
@@ -314,6 +344,7 @@ my $arithmetic_bnf = MarpaX::Parse->new({
 });
 
 say $arithmetic_bnf->show_rules;
+say $arithmetic_bnf->show_closures;
 
 # test decimal number bnf
 my $expressions = [
