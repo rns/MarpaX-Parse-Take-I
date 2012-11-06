@@ -114,7 +114,7 @@ evaluation of parse by the application
 # to MarpaX::Parse are shown # by show_* options
 #
 
-my $marpa_easy_options = {
+my $MarpaX_Parse_options = {
 
     # stage: BNF grammar parser initialization
     show_bnf_parser_tokens => undef,
@@ -204,11 +204,12 @@ sub build{
     
     # extract MarpaX::Parse options and set defaults
     while (my ($option, $value) = each %$options){
-        if (exists $marpa_easy_options->{$option}){
+        if (exists $MarpaX_Parse_options->{$option}){
             $self->{$option} = $value;
             delete $options->{$option};
         }
     }
+    
     # set defaults
     $self->{quantifier_rules}               //= 'sequence';
     $self->{ambiguity}                      //= 'input_model';
