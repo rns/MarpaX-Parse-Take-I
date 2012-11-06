@@ -141,14 +141,13 @@ my $ebnf_rules = [
 
 #   [ 'rhs' => [qw(term action)], sub { } ],
 #   [ 'rhs' => [qw(term action '|' rhs)], sub { } ],
-  
 
     # rhs ::= term (rhs | term)*
-    [ 'rhs' => [qw(term)], sub { 
+    [ 'rhs' => [qw(term action)], sub { 
         { alternation => [ $_[1] ] }
     } ],
 
-    [ 'rhs' => [qw(rhs '|' term)], sub { 
+    [ 'rhs' => [qw(rhs '|' term action )], sub { 
 #        say Dump \@_;
         push @{ $_[1]->{alternation} }, $_[3];
         $_[1]
@@ -164,29 +163,16 @@ my $ebnf_rules = [
     } ],
     
     # factor ::= symbol quantifier
-    [ factor => [qw(     symbol quantifier )], 
+    [ factor => [qw( symbol quantifier )], 
         sub { 
             { symbol => $_[1] . ($_[2] ? $_[2] : '')  }
         } 
     ], 
 
-    # factor ::= '(' rhs ')'
-    # '(' rhs ')' quantifier? action?
-#    [ factor => [qw( '(' rhs ')' )], 
-#        sub { 
-#            my $subrule = $_[2]; #{ symbols => $_[2] };
-#
-#            # add subrule under provisional lhs
-#            my $prov_lhs = "__subrule" . $subrule_no++;
-#            $subrules{$prov_lhs} = $subrule;
-            
-            # return provisional lhs
-#            $prov_lhs;
-#        }
-#    ], 
-
-    # '(' identifier ':' rhs ')' quantifier? action?
-    [ factor => [qw( '(' rhs ')' quantifier )], 
+    # TODO: factor ::= '(' identifier ':' rhs ')' quantifier? action?
+    
+    # factor ::= '(' rhs ')' quantifier? action?
+    [ factor => [qw( '(' rhs ')' quantifier action )], 
         sub { 
             my $subrule = $_[2];
 #            $subrule->{quantifier} = $_[4];
@@ -199,6 +185,9 @@ my $ebnf_rules = [
             $prov_lhs;
         } 
     ], 
+
+    [ action => [] ],
+    [ action => [qw(action_in_tags)], sub { { action => $_[1] }} ],
 
     [ quantifier => [], ],
     [ quantifier => [qw( '?' )] ], 
@@ -213,6 +202,7 @@ my $ebnf_rules = [
 sub rules { $ebnf_rules }
 
 my $balanced_terminals = {
+    '%{.+?%}' => 'action_in_tags',
     '".+?"' => 'literal',
     "'.+?'" => 'literal',
 };
