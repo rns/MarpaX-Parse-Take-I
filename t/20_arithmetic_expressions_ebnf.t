@@ -25,7 +25,7 @@ my $ebnf = MarpaX::Parse->new({
     ebnf => 1,
 #    show_tokens => 1,
     quantifier_rules => 'recursive',
-    nullable_quantified_symbols => 1,
+    nullables_for_quantifiers => 1,
 });
 
 say $ebnf->show_rules;
