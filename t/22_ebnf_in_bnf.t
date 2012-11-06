@@ -37,8 +37,8 @@ my $ebnf_in_bnf = q{
 
             # set up Marpa::R2 rules
             my ($lhs, undef, $rhs) = @value;
-#            say "# production/lhs:\n$lhs";
-#            say "# production/rhs:\n", Dump $rhs;
+            say "# production/lhs:\n$lhs";
+            say "# production/rhs:\n", Dump $rhs;
 
             sub make_rule{
                 my ($lhs, $rhs, $lhs_action) = @_;
@@ -63,7 +63,7 @@ my $ebnf_in_bnf = q{
                             }
                         }
                         elsif (exists $item->{subrule}){
-                            push @rhs, $item->{subrule};
+                            push @rhs, $item->{subrule} =~ /^__/ ? $lhs . $item->{subrule} : $item->{subrule};
                         }
                         else{
 #                            say '# something else: ', Dump $item;
@@ -88,14 +88,17 @@ my $ebnf_in_bnf = q{
             push @$rules, @$rule;
             # add $%rule_clocures to %$closures to be added to the respective rules
             # after they are set up
-#            say "closures to be added", Dump $subrule_closures;
+            say "closures to be added", Dump $subrule_closures;
             $closures->{$_} = $subrule_closures->{$_} for keys %$subrule_closures;
             
             # add subrules, if any
             if ( exists $per_parse->{subrules} and defined $per_parse->{subrules} ){
 #                say "# subrules:\n", Dump $per_parse->{subrules};
                 for my $subrule_lhs (keys %{ $per_parse->{subrules} }){
-                    my ($rule, $subrule_closures) = make_rule($subrule_lhs, $per_parse->{subrules}->{$subrule_lhs});
+                    my ($rule, $subrule_closures) = make_rule(
+                        $subrule_lhs =~ /^__/ ? $lhs . $subrule_lhs : $subrule_lhs, 
+                        $per_parse->{subrules}->{$subrule_lhs}
+                    );
                     # add rule
                     push @$rules, @$rule;
                     # add $%rule_clocures to %$closures to be added to the respective rules
@@ -167,7 +170,7 @@ my $ebnf_in_bnf = q{
             shift;
 
             my @value = grep { defined } @_;
-#            say "# $rule_signature:\n", Dump \@value;
+            say "# $rule_signature:\n", Dump \@value;
 #            return @value > 1 ? \@value : shift @value;
             
             # extract quantifier and action
@@ -179,7 +182,7 @@ my $ebnf_in_bnf = q{
 
             # add quantifier and action, if any, to the factor
             $factor->{action}   = shift @action if @action;
-            $factor->{subrule} .= shift @quantifier if @quantifier;
+            $factor->{symbol} .= shift @quantifier if @quantifier;
 
             # return factor
             $factor;
@@ -190,7 +193,7 @@ my $ebnf_in_bnf = q{
             my $per_parse = shift; # per-parse var
 
             my @value = grep { defined } @_;
-#            say "# $rule_signature:\n", Dump \@value;
+            say "# $rule_signature:\n", Dump \@value;
 #            return @value > 1 ? \@value : shift @value;
             
             # extract quantifier and action
@@ -222,7 +225,7 @@ my $ebnf_in_bnf = q{
             my $per_parse = shift; # per-parse var
 
             my @value = grep { defined } @_;
-#            say "# $rule_signature:\n", Dump \@value;
+            say "# $rule_signature:\n", Dump \@value;
 #            return @value > 1 ? \@value : shift @value;
             
             # extract quantifier and action
@@ -239,7 +242,7 @@ my $ebnf_in_bnf = q{
             my $factor = { symbol => $value[1] };
 
             # add quantifier, if any, to the subrule's lhs (not $per_parse->{subrules}
-            $factor->{subrule} .= shift @quantifier if @quantifier;
+            $factor->{symbol} .= shift @quantifier if @quantifier;
 
             # return factor
             $factor;
@@ -261,6 +264,7 @@ my $ebnf_bnf = MarpaX::Parse->new({
     default_action => 'AoA',
     quantifier_rules => 'recursive', # this toglles on nullables in quantifiers
 #    show_bnf_tokens => 1,
+    nullables_for_quantifiers => 1,
 });
 
 isa_ok $ebnf_bnf, 'MarpaX::Parse';
@@ -304,8 +308,9 @@ say "# arithmetic rules:\n", Dump $arithmetic_rules;
 # set up decimal number bnf
 my $arithmetic_bnf = MarpaX::Parse->new({
     rules => $arithmetic_rules,
-    default_action => 'AoA_with_rule_signatures',
-    show_bnf_tokens => 1,
+    default_action => 'tree',
+    quantifier_rules => 'recursive',
+    nullables_for_quantifiers => 1,
 });
 
 say $arithmetic_bnf->show_rules;
@@ -329,8 +334,8 @@ for my $expr (@$expressions){
 
     # parse tree is in XML string (default_action => 'xml')
     my $value = $arithmetic_bnf->parse($expr);
-
+    
     unless (is $value, $expr, "expression $expr lexed and parsed with EBNF"){
-        $arithmetic_bnf->show_parse_tree;
+        say $arithmetic_bnf->show_parse_tree;
     }
 }
