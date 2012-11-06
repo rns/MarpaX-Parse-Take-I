@@ -8,15 +8,25 @@ use YAML;
 
 use_ok 'MarpaX::Parse';
 
-use Eval::Closure;
-
 my $ebnf_in_bnf = q{
 
   grammar       ::= production+
         %{
             shift;
-#            { grammar => $_[0] };
-            return [ map { @$_ } @{ $_[0] } ];
+            my $rules = [];
+            my @productions = @_;
+            say scalar @productions;
+            for my $production (@productions){
+                for my $Marpa_rules (@$production){
+    #                say "# production rules: ", Dump $Marpa_rules;
+                    push @$rules, @$Marpa_rules;
+                }
+            }
+    #        say Dump \@_;
+    #        \@_;
+            # FIXME: this is because the inner closure in the action of the next rule
+            # is get called twice
+            $rules; 
         %}
   
   production    ::= lhs '::=' rhs action?
@@ -27,97 +37,111 @@ my $ebnf_in_bnf = q{
             
             # Marpa rules-to-be
             my $rules = [];
-            my $closures = {};
             
             # set up Marpa::R2 rules
             my ($lhs, undef, $rhs, $production_action) = @value;
-            say "# production/lhs:\n$lhs";
-            say "# production/rhs:\n", Dump $rhs;
+#            say "# production/lhs:\n$lhs";
+#            say "# production/rhs:\n", Dump $rhs;
 
             # extract production action, if any
             if (ref $production_action eq "HASH" and exists $production_action->{action}){
                 $production_action = $production_action->{action};
-                say "production_action: $production_action";
+#                say "production_action: $production_action";
             }
-
+            
             sub make_rule{
-                my ($lhs, $rhs, $lhs_action) = @_;
+                my ($lhs, $rhs, $rule_action) = @_;
                 
+                my $action_prolog = q{
+                    # start action prolog
+                    # imports
+                    use 5.010; use strict; use warnings; use YAML;
+                    # rule parts and signature
+                    my ($rule_lhs, @rule_rhs) = $Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule);
+                    my $rule_signature = $rule_lhs . ' -> ' . join ' ', @rule_rhs;
+                    # end action prolog
+                };
+
                 my $rule = [];
-                my $subrule_closures = {};
                 my $alt = $rhs->{alternation};
-                $lhs_action = $rhs->{action};
+                $rule_action //= $rhs->{action};
                 for my $seq ( map { $_->{sequence} } @{ $alt } ){
-            #                say "# seq:\n", Dump $seq;
+#                    say "# seq:\n", Dump $seq;
                     my @rhs;
-                    my $closure;
+                    my $term_closure;
+                    my $term_action;
                     for my $item (@$seq){
                         if (exists $item->{symbol}){
                             push @rhs, $item->{symbol};
-                            # extract and set up action, if any
-                            if (exists $item->{action}){
-                                # set up closure
-                                $closure = $item->{action};
-                                $subrule_closures->{$item->{symbol}} = $closure;
-                                say "\t\t$closure";
-                            }
+                        }
+                        # extract and set up action, if any
+                        elsif (exists $item->{action}){
+                            # set up term closure
+                            $term_action = $item->{action};
+                            # remove tags, add prolog and compile
+                            use Eval::Closure;
+                            $term_closure = eval_closure(
+                                source => "sub {\n" . $action_prolog . substr($term_action, 2, -3) . "}"
+                            );
                         }
                         elsif (exists $item->{subrule}){
                             push @rhs, $item->{subrule} =~ /^__/ ? $lhs . $item->{subrule} : $item->{subrule};
                         }
                         else{
-#                            say '# something else: ', Dump $item;
+                            # Marpa fatalizes warnings
+                            warn '# something else: ', Dump $item;
                         }
                     }
-                    say "$lhs -> @rhs", $lhs_action ? "\t$lhs_action" : '';
-                    # add rule
-                    push @$rule, { lhs => $lhs, rhs => \@rhs };
                     # add action to rule
-                    if ($lhs_action){
+                    my $rule_closure;
+                    if ($rule_action){
                         # set up closure
-                        
-                        # add closure to rule
-                        
+                        # remove tags, add prolog and compile
+                        use Eval::Closure;
+                        $rule_closure = eval_closure(
+                            source => "sub {\n" . $action_prolog . substr($rule_action, 2, -3) . "}"
+                        );
                     }
+                    say "$lhs -> @rhs", ($rule_action ? "\trule closure: $rule_action" : ''), ($term_action ? "\tterm action: $term_action" : '');
+                    # add rule
+                    my $rule_href = { lhs => $lhs, rhs => \@rhs };
+                    # add closure to rule; if actions of both rule and term are specified,
+                    # use $rule_action, otherwise use $term_action
+                    if ($rule_action){
+                        say "# setting rule action: ", $rule_action;
+                        $rule_href->{action} = $rule_closure;
+                    }
+                    elsif ($term_action){
+                        say "# setting term action: ", $term_action;
+                        $rule_href->{action} = $term_closure;
+                    }
+                    push @$rule, $rule_href;
                 }            
-                return ($rule, $subrule_closures);
+                return $rule;
             }
             
-            my ($rule, $subrule_closures) = make_rule($lhs, $rhs, $production_action);
+            my $rule = make_rule($lhs, $rhs, $production_action);
             # add rule
             push @$rules, @$rule;
-            # add $%rule_clocures to %$closures to be added to the respective rules
-            # after they are set up
-            say "# subrule closures to be added:\n", Dump $subrule_closures;
-            $closures->{$_} = $subrule_closures->{$_} for keys %$subrule_closures;
-            
+
             # add subrules, if any
             if ( exists $per_parse->{subrules} and defined $per_parse->{subrules} ){
-                say "# subrules:\n", Dump $per_parse->{subrules};
+#                say "# subrules:\n", Dump $per_parse->{subrules};
                 for my $subrule_lhs (keys %{ $per_parse->{subrules} }){
-                    my ($rule, $subrule_closures) = make_rule(
+                    my  $rule = make_rule(
                         $subrule_lhs =~ /^__/ ? $lhs . $subrule_lhs : $subrule_lhs, 
                         $per_parse->{subrules}->{$subrule_lhs}
                     );
                     # add rule
                     push @$rules, @$rule;
-                    # add $%rule_clocures to %$closures to be added to the respective rules
-                    # after they are set up
-#                    say "closures to be added", Dump $subrule_closures;
-                    $closures->{$_} = $subrule_closures->{$_} for keys %$subrule_closures;
                 }
                 # reinitialize subrules (expressions in parens)
                 $per_parse->{subrules}      = ();
                 $per_parse->{subrule_id}    = 0;
             }
             
-            say Dump $rules;
-            # add closures to the rules, whose rhs contains the symbol
-            for my $symbol (keys %$closures){
-                say "# subrule closure to be added:\n", $symbol, ' -> ', $closures->{$symbol};
-            }            
+#            say Dump $rules;
             
-#            \@_;
             return $rules
         %}
 
@@ -297,7 +321,7 @@ my $ebnf_bnf = MarpaX::Parse->new({
 
 isa_ok $ebnf_bnf, 'MarpaX::Parse';
 
-#say $ebnf_bnf->show_rules;
+#say "# ebnf_bnf:\n", $ebnf_bnf->show_rules;
 
 #
 # if a production has one action, this one action is treated as a production's action
@@ -311,23 +335,37 @@ isa_ok $ebnf_bnf, 'MarpaX::Parse';
 # separate rules, such as groups (in parens), alternatives, and 
 # whole productions, e.g. %{ action(<add_sub_op>) %}, 
 # %{ action(<'9'>) %}, and %{ action(<digit>) %}, accordingly
-my $arithmetic = q{
+my $arithmetic_with_actions = q{
 
     expression  ::= 
 
         term                            
 
-        ( (add_sub_op: '+' | '-' ) %{ action(<add_sub_op>) %} term )* 
+        ( (add_sub_op: '+' | '-' ) %{ shift; say "# action(<add_sub_op>):\n";  \@_ %} term )* 
             
-            %{ action(anonymous subrule <()*>) %} 
+            %{ shift; say "# action(anonymous subrule <()*>):\n";  \@_ %} 
             
-        %{ action(expression) %}
+        %{ shift; say "# action(expression):\n";  \@_ %}
         
-    term        ::= factor  ( (mul_div_op: '*' | '/' ) %{ action of <mul_div_op> %} factor)*
+    term        ::= factor  ( (mul_div_op: '*' | '/' ) %{ shift; say "# action(<mul_div_op>):\n";  \@_ %} factor)*
     factor      ::= constant | variable | '('  expression  ')'
     variable    ::= 'x' | 'y' | 'z'
     constant    ::= digit+ (frac:'.' digit+)?
-    digit       ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' %{ action(<'9'>) %} %{ action(<digit>) %}
+    digit       ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' %{ action(<'9'>) %} %{ shift; say "# action(<digit>):\n";  \@_ %}
+    
+};
+
+# %{ shift; say "# $rule_signature:\n", Dump \@_; \@_ %}
+my $arithmetic = q{
+
+    expression  ::= term ( (add_sub_op: '+' | '-' ) term )* 
+    %{ shift; \@_ %} 
+    %{ shift; unshift @_, $rule_signature; \@_ %}
+    term        ::= factor  ( (mul_div_op: '*' | '/' ) factor)*
+    factor      ::= constant | variable | '('  expression  ')'
+    variable    ::= 'x' | 'y' | 'z'
+    constant    ::= digit+ (frac:'.' digit+)?
+    digit       ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
     
 };
 
@@ -337,8 +375,8 @@ say "# arithmetic rules:\n", Dump $arithmetic_rules;
 
 # set up decimal number bnf
 my $arithmetic_bnf = MarpaX::Parse->new({
-    rules => $arithmetic_rules,
-    default_action => 'tree',
+    rules => $arithmetic_rules->[0],
+    default_action => 'AoA',
     quantifier_rules => 'recursive',
     nullables_for_quantifiers => 1,
 });
@@ -367,6 +405,18 @@ for my $expr (@$expressions){
     my $value = $arithmetic_bnf->parse($expr);
     
     unless (is $value, $expr, "expression $expr lexed and parsed with EBNF"){
+#        say Dump $value;
         say $arithmetic_bnf->show_parse_tree;
     }
 }
+
+=pod open questions
+
+    why with actions the seems to be run twice and yields 2 grammars
+    
+    why multiline actions do not work with arithmetic expr grammar 
+    
+    the last action needs to be in the rule where it belongs and nt in its last term
+    option is to empty action 
+    
+=cut
