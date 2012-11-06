@@ -517,7 +517,7 @@ sub _ebnf_to_rules
     # parse ebnf
     my $ebnf_tokens = MarpaX::Parse::EBNF->lex_ebnf_text($ebnf);
     
-#    say "# EBNF tokens:\n", Dump $ebnf_tokens;
+    say "# EBNF tokens:\n", Dump $ebnf_tokens;
     
     # save ebnf tokens
     $self->set_option('ebnf_tokens', join "\n", map { join ': ', @$_ } @$ebnf_tokens);
@@ -532,7 +532,7 @@ sub _ebnf_to_rules
     
     # parse EBNF tokens to Marpa::R2 rules
 #    say "# parsing EBNF";
-#    say $ebnf_parser->show_rules;
+    say $ebnf_parser->show_rules;
     my $rules = $ebnf_parser->parse($ebnf_tokens);
     
 #    say Dump $rules;
