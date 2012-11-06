@@ -6,17 +6,14 @@ What It Is
 
 This module aims at serving as a simple and powerful parsing interface to Marpa::R2 so that a user can:
 
-* call `parse` method on the input and receive the value produced by Marpa::R2 evaluator or a  by actions or closures set in `rules`
-* use closures (`sub { ... }`) in Marpa::R2::Grammar rules,
-* omit default_action and have it set to `'AoA'` to have the rules evaluated to arrays of arrays automagically,
-* have the lhs of the first rule passed to Marpa::R2::Grammar set as its start symbol, if no start symbol is set in Marpa::R2::Grammar constructor,
-* set the `'rules'` argument of Marpa::R2::Grammar to a string containing a BNF or EBNF grammar (which may define actions in `%{ %}` tags), 
-* have literals extracted and used to lex the input into tokens that will go to the recognizer, 
+* set the `'rules'` argument of Marpa::R2::Grammar to a string containing a BNF or EBNF grammar (which may embed `%{ ... %}` actions), 
+* call `parse` method on the input and receive the value produced by Marpa::R2 evaluator based on emdedded `%{ ... %}` actions in textual grammar or closures (`sub { ... }`) rather than semantic action names) set in Marpa::R2 `rules`
+* have literals extracted from the textual grammar or Marpa::R2 `rules` and set up as regexes  for lexer rules to tokenize the input for the recognizer, 
 * set default_action to `'tree'`, `'xml'`, `'sexpr'`, `'AoA'`, and `'HoA'`, to have `parse` return a parse tree (Tree::Simple, XML string, S-expression string, array of arrays, and hash of arrays, accordingly), 
 * call `show_parse_tree($format)` to view the parse tree as text dump, HTML or formatted XML;
 * use Tree::Simple::traverse, Tree::Simple::Visitor or XML::Twig to traverse the relevant parse trees and gain results.
 
-The input can be a string or a reference to an array of `[ $type, $value ]` refs. 
+Input can be a string or a reference to an array of tokens (`[ $type, $value ]` refs). 
 
 Ambiguous tokens can be defined by setting the input array item(s) to 
 `[ [ $type1, $value ],  [ $type2, $value ] ] ...` and will be handled with 
