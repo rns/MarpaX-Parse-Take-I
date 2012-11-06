@@ -21,9 +21,10 @@ my %subrules    = ();
 my $subrule_no  = 0;
 
 =pod
-  rhs ::= 
+  [ 'rhs' => [qw(term action)], sub { } ],
+  [ 'rhs' => [qw(term action '|' rhs)], sub { } ],
 
-    term action?
+  rhs ::=  term action? '|' rhs
         %{ 
             shift;
 
@@ -62,9 +63,6 @@ my $subrule_no  = 0;
             $rhs
         %}
 
-  term ::= 
-    
-    factor
         %{ 
             shift;
 #            say "# $rule_signature:\n", Dump \@_;
@@ -84,12 +82,13 @@ my $ebnf_rules = [
     
     # grammar ::= production+
     [ grammar => [qw( production+ )], sub {
-        say Dump \@_;
-        say scalar @{ $_[1] };
+#        say Dump \@_;
+#        say scalar @{ $_[1] };
         return @{ $_[1] } > 1 ? [ map { @$_ } @{ $_[1] } ] : $_[1];
     } ],
     
     # production ::= lhs '::=' rhs
+    # production    ::= lhs '::=' rhs action?
     [ production => [qw( lhs ::= rhs )], 
         sub {
             shift;
@@ -139,52 +138,52 @@ my $ebnf_rules = [
     
     # lhs ::= symbol
     [ lhs => [qw( symbol )] ],
-    
-    # see new rules above
-    # rhs ::= term ('|' term)*
-    { lhs => 'rhs', rhs => ['term'], min => 1, separator => '|', proper => 1, action =>
-        sub {
-            shift;
-            { alternation => \@_ }
-        }
-    },
-    
-    # term ::= factor+
-    { lhs => 'term', rhs => ['factor'], min => 1, proper => 1, action =>
-        sub {
-            shift;
-            { sequence => \@_ }
-        }
-    },
-    
-    # factor ::= symbol
-    [ factor => [qw(     symbol )], 
-        sub { 
-            { symbol => $_[1] }
-        } 
-    ], 
+
+#   [ 'rhs' => [qw(term action)], sub { } ],
+#   [ 'rhs' => [qw(term action '|' rhs)], sub { } ],
+  
+
+    # rhs ::= term (rhs | term)*
+    [ 'rhs' => [qw(term)], sub { 
+        { alternation => [ $_[1] ] }
+    } ],
+
+    [ 'rhs' => [qw(rhs '|' term)], sub { 
+#        say Dump \@_;
+        push @{ $_[1]->{alternation} }, $_[3];
+        $_[1]
+    } ],
+   
+    [ term => [qw{ factor }], sub {
+        { sequence => [ $_[1] ] }
+    } ],
+
+    [ term => [qw{ term factor }], sub {
+        push @{ $_[1]->{sequence} }, $_[2];
+        $_[1]
+    } ],
     
     # factor ::= symbol quantifier
     [ factor => [qw(     symbol quantifier )], 
         sub { 
-            { symbol => "$_[1]$_[2]"  }
+            { symbol => $_[1] . ($_[2] ? $_[2] : '')  }
         } 
     ], 
 
     # factor ::= '(' rhs ')'
     # '(' rhs ')' quantifier? action?
-    [ factor => [qw( '(' rhs ')' )], 
-        sub { 
-            my $subrule = $_[2]; #{ symbols => $_[2] };
-
-            # add subrule under provisional lhs
-            my $prov_lhs = "__subrule" . $subrule_no++;
-            $subrules{$prov_lhs} = $subrule;
+#    [ factor => [qw( '(' rhs ')' )], 
+#        sub { 
+#            my $subrule = $_[2]; #{ symbols => $_[2] };
+#
+#            # add subrule under provisional lhs
+#            my $prov_lhs = "__subrule" . $subrule_no++;
+#            $subrules{$prov_lhs} = $subrule;
             
             # return provisional lhs
-            $prov_lhs;
-        }
-    ], 
+#            $prov_lhs;
+#        }
+#    ], 
 
     # '(' identifier ':' rhs ')' quantifier? action?
     [ factor => [qw( '(' rhs ')' quantifier )], 
@@ -193,7 +192,7 @@ my $ebnf_rules = [
 #            $subrule->{quantifier} = $_[4];
 
             # add subrule under provisional lhs with quantifier
-            my $prov_lhs = "__subrule" . $subrule_no++ . $_[4];
+            my $prov_lhs = "__subrule" . $subrule_no++ . ($_[4] ? $_[4] : '');
             $subrules{$prov_lhs} = $subrule;
             
             # return provisional lhs
@@ -201,6 +200,7 @@ my $ebnf_rules = [
         } 
     ], 
 
+    [ quantifier => [], ],
     [ quantifier => [qw( '?' )] ], 
     [ quantifier => [qw( '*' )] ], 
     [ quantifier => [qw( '+' )] ], 
@@ -220,7 +220,7 @@ my $balanced_terminals_re = join '|', keys %$balanced_terminals;
 
 my $literal_terminals = {
     '::=' => '::=',
-    '|' => '|',
+    "|" => "'|'",
     '(' => "'('",
     ')' => "')'",
     '?' => "'?'",
