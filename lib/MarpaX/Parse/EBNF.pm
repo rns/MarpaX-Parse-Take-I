@@ -20,64 +20,6 @@ sub new
 my %subrules    = ();
 my $subrule_no  = 0;
 
-=pod
-  [ 'rhs' => [qw(term action)], sub { } ],
-  [ 'rhs' => [qw(term action '|' rhs)], sub { } ],
-
-  rhs ::=  term action? '|' rhs
-        %{ 
-            shift;
-
-#            say "# $rule_signature:\n", Dump \@_;
-
-            my @value = grep { defined } @_;
-            my $term = { alternation => [ shift @value ] };
-            push @{ $term->{alternation}->[0]->{sequence} }, $value[0] if ref $value[0] eq "HASH" and exists $value[0]->{action};
-            
-#            say "# $rule_signature (value):\n", Dump $term;
-            
-            $term;
-        %}
-        |
-
-    term action? '|' rhs
-        %{ 
-            shift;
-#            say "# $rule_signature:\n", Dump \@_;
-            
-            my @value = grep { defined } @_;
-            
-            # extract and set up the term
-            my $term = shift @value;
-            # extract rhs
-            my $rhs = pop @value;
-            # extract '|';
-            pop @value;
-            # extract action, if any
-            $term->{action} = $value[0]->{action} if ref $value[0] eq "HASH" and exists $value[0]->{action};
-            # prepend term to rhs
-            unshift @{ $rhs->{alternation} }, $term; 
-            
-#            say "# $rule_signature (value):\n", Dump $rhs;
-            
-            $rhs
-        %}
-
-        %{ 
-            shift;
-#            say "# $rule_signature:\n", Dump \@_;
-            { sequence => [ $_[0] ] } 
-        %}
-        |
-    term factor
-        %{ 
-            shift;
-#            say "# $rule_signature:\n", Dump \@_;
-            push @{ $_[0]->{sequence} }, $_[1]; 
-            $_[0]
-        %}
-=cut
-
 my $ebnf_rules = [
     
     # grammar ::= production+
@@ -89,11 +31,11 @@ my $ebnf_rules = [
     
     # production ::= lhs '::=' rhs
     # production    ::= lhs '::=' rhs action?
-    [ production => [qw( lhs ::= rhs )], 
+    [ production => [qw( lhs ::= rhs action )], 
         sub {
             shift;
             
-            my ($lhs, undef, $rhs) = @_;
+            my ($lhs, undef, $rhs, $prod_action) = @_;
             
             my $rules = [];
             
@@ -102,6 +44,7 @@ my $ebnf_rules = [
 
             say "# production/lhs\n", $lhs;
             say "# production/rhs\n", Dump $rhs;
+            say "# production/action\n", $prod_action if $prod_action;
             say "# subrules\n", Dump \%subrules;
             
             # add rule
@@ -144,11 +87,15 @@ my $ebnf_rules = [
 
     # rhs ::= term (rhs | term)*
     [ 'rhs' => [qw(term action)], sub { 
-        { alternation => [ $_[1] ] }
+#        say Dump \@_;
+        my $term = { alternation => [ $_[1] ] };
+        $term->{alternation}->[0]->{action} = $_[2] if defined $_[2];
+        $term;
     } ],
 
     [ 'rhs' => [qw(rhs '|' term action )], sub { 
 #        say Dump \@_;
+        $_[3]->{action} = $_[4] if defined $_[4];
         push @{ $_[1]->{alternation} }, $_[3];
         $_[1]
     } ],
@@ -174,9 +121,14 @@ my $ebnf_rules = [
     # factor ::= '(' rhs ')' quantifier? action?
     [ factor => [qw( '(' rhs ')' quantifier action )], 
         sub { 
+            say Dump \@_;
             my $subrule = $_[2];
-#            $subrule->{quantifier} = $_[4];
 
+            my $quantifier = $_[4] if defined $_[4] and $_[4] ~~ ['?', '*', '+'];
+            $quantifier //= '';
+
+            my $action = $_[-1] if defined $_[-1] and index($_[-1], "%{", 0) == 0;
+            
             # add subrule under provisional lhs with quantifier
             my $prov_lhs = "__subrule" . $subrule_no++ . ($_[4] ? $_[4] : '');
             $subrules{$prov_lhs} = $subrule;
@@ -187,7 +139,7 @@ my $ebnf_rules = [
     ], 
 
     [ action => [] ],
-    [ action => [qw(action_in_tags)], sub { { action => $_[1] }} ],
+    [ action => [qw(action_in_tags)], sub { $_[1] } ],
 
     [ quantifier => [], ],
     [ quantifier => [qw( '?' )] ], 
@@ -202,7 +154,7 @@ my $ebnf_rules = [
 sub rules { $ebnf_rules }
 
 my $balanced_terminals = {
-    '%{.+?%}' => 'action_in_tags',
+    '%{.*?%}' => 'action_in_tags',
     '".+?"' => 'literal',
     "'.+?'" => 'literal',
 };
