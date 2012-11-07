@@ -22,6 +22,7 @@ sub lex
     
     my $input = shift;
     
+    # TODO: this needs to be a call to $self->{grammar}->_extract_lexer_rules
     my $lex = shift || $self->{grammar}->{lexer_rules};
 
     #$self->set_option('input', $input);

@@ -10,20 +10,13 @@ use YAML;
 
 use Marpa::R2;
 
-use Tree::Simple 'use_weak_refs';
-use Tree::Simple::Visitor;
-use Tree::Simple::View::DHTML;
-use Tree::Simple::View::HTML;
-
-use Data::TreeDumper;
-
 use MarpaX::Parse::Grammar;
 use MarpaX::Parse::Lexer;
 
 use MarpaX::Parse::BNF;
 use MarpaX::Parse::EBNF;
 
-use Math::Combinatorics;
+use MarpaX::Parse::Tree;
 
 use Encode qw{ encode is_utf8 };
 
@@ -323,7 +316,10 @@ sub build {
     $self->{closures} = $closures;
 
     # handle default action
-    $self->_set_default_action($options);    
+    $g->_set_default_action($options);    
+
+    # TODO: parse() needs this; to be removed
+    $self->{default_action} = $options->{default_action};
     
     # set start to lhs of the first rule if not set
     if (not exists $options->{start}){
@@ -360,6 +356,8 @@ sub build {
     
     # extract and save lexer rules
     $self->set_option('lexer_rules', $g->_extract_lexer_rules( $options->{rules} ) );
+    
+    $self->{tree_package} = MarpaX::Parse::Tree->new;
 }
 
 # print a variable with comment and stack trace
@@ -614,30 +612,6 @@ sub _ebnf_to_rules
     return $rules;
 }
 
-# =======================
-# grammar rule transforms
-# =======================
-
-sub _set_default_action
-{
-    my $self = shift;
-    
-    my $options = shift;
-    
-    # if default action exists in this package then use it
-    my $da = $options->{default_action};
-    if (defined $da){
-        if (exists $MarpaX::Parse::{$da}){
-            $options->{default_action} = __PACKAGE__ . '::' . $da;
-        }
-    }
-    # otherwise set _default_action which prints the rules and their contents
-    else{
-        $options->{default_action} = __PACKAGE__ . '::' . 'AoA';
-    }
-    $self->{default_action} = $options->{default_action};
-}
-
 #
 # get current options (as-passed), get rules from them, merge new rules, 
 # and rebuild MarpaX::Parse
@@ -664,272 +638,6 @@ sub merge_token_rules {
     
     # rebuild
     $self->build($options);
-}
-
-# ======================================
-# default actions (building parse trees)
-# ======================================
-
-sub AoA { 
-
-    # The per-parse variable.
-    shift;
-
-    # Throw away any undef's
-    my @children = grep { defined } @_;
-    
-    # Return what's left as an array ref or a scalar
-    scalar @children > 1 ? \@children : shift @children;
-}
-
-sub HoA { 
-
-    # The per-parse variable.
-    shift;
-
-    # Throw away any undef's
-    my @children = grep { defined } @_;
-    
-    # Get the rule's lhs
-    my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
-    
-    # Return what's left as an array ref or a scalar named after the rule's lhs
-    return { $lhs => scalar @children > 1 ? \@children : shift @children }
-}
-
-sub HoH { 
-
-    # The per-parse variable.
-    shift;
-
-    # Get the rule's lhs
-    my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
-
-    # Throw away any undef's
-    my @children = grep { defined } @_;
-    
-    # Return what's left as an array ref or a scalar
-    my $result = {};
-#    say "# children of $lhs\n", Dump \@children;
-    if (@children > 1){
-        for my $child (@children ){
-            if (ref $child eq "HASH"){
-#                say "# child of $lhs (HASH):\n", Dump $child;
-                for my $key (keys %$child){
-                    # replace duplicate key to array ref
-                    if (exists $result->{$lhs}->{$key}){
-                        $result->{$lhs}->{$key} = [ values %{ $result->{$lhs} } ] 
-                            unless ref $result->{$lhs}->{$key} eq "ARRAY";
-                        push @{ $result->{$lhs}->{$key} }, values %{ $child };
-                    }
-                    else{
-                        $result->{$lhs}->{$key} = $child->{$key};
-                    }
-                }
-            }
-            elsif (ref $child eq "ARRAY"){
-#                say "# child of $lhs (ARRAY):\n", Dump $child;
-                # issue warning when destination key already exists
-                if (exists $result->{$lhs}){
-                    say "This value of {$lhs}:\n", Dump($result->{$lhs}), "will be replaced with:\n", Dump($child);
-                }
-                $result->{$lhs} = $child;
-            }
-        }
-    }
-    else {
-        $result->{$lhs} = shift @children;
-    }        
-    return $result;
-}
-
-sub AoA_with_rule_signatures { 
-
-#    say "# AoA_with_rule_signatures ", Dump \@_;
-
-    # per-parse variable.
-    shift;
-    
-    # Throw away any undef's
-    my @children = grep { defined } @_;
-    
-    # Return what's left as an array ref or a scalar
-    my $result = scalar @children > 1 ? \@children : shift @children;
-    
-    # Get the rule lhs and rhs and make the rule signature
-    my ($lhs, @rhs) = $Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule);
-    my $rule = $lhs . ' -> ' . join ' ', @rhs;
-
-    $result = [ $result ];
-    unshift @$result, $rule;
-
-    return $result;
-}
-
-# s-expression
-sub sexpr { 
-
-    # The per-parse variable.
-    shift;
-    
-    # Get the rule's lhs
-    my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
-    
-    # Throw away any undef's
-    if (my @children = grep { defined } @_){
-        return "($lhs " . join(' ', map { ref $_ eq "ARRAY" ? join ' ', @$_ : $_ } @children) . ")";
-    }
-    
-    return undef; 
-}
-
-sub tree { 
-
-    # The per-parse variable.
-    shift;
-    
-    my @children = grep { defined } @_;
-    
-    if (@children){
-#        say "# tree:\n", Dump [ map { ref $_ eq 'Tree::Simple' ? ref $_ : $_ } @children ];
-
-        # get the rule's lhs
-        my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
-
-        # set up the parse tree node
-        my $node = Tree::Simple->new($lhs);
-        $node->addChildren(
-            map { 
-                    ref $_ eq 'Tree::Simple' 
-                        ? $_ 
-                        : ref $_ eq "ARRAY" 
-                            ? map { ref $_ eq 'Tree::Simple' 
-                                ? $_ 
-                                    : Tree::Simple->new($_) } grep { defined $_ } @$_ 
-                                : Tree::Simple->new($_) 
-                } 
-                @children
-        );
-
-        return $node;
-    }
-
-    return undef;
-}
-
-# remove unneeded Tree::Simple information from Data::TreeDumper's output
-sub filter
-{
-    my $s = shift;
-
-    if('Tree::Simple' eq ref $s){
-        my $counter = 0;
-        return (
-            'ARRAY', 
-            $s->{_children}, 
-            # index generation
-            map 
-                { 
-                    [ $counter++, $_->{_node} ] 
-                } 
-                @{ 
-                    $s->{_children}
-                }
-        );
-    }
-    
-    return(Data::TreeDumper::DefaultNodesToDisplay($s)) ;
-}
-
-sub xml {
-
-#    say Dump \@_;
-    
-    # The per-parse variable.
-    shift;
-    
-    # Get the rule's lhs
-    my $lhs = ($Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule))[0];
-    
-    # replace symbols quantifier symbols (not valid in XML tags) with plural (hopefully)
-    $lhs =~ s/(\+|\*)$/s/;
-    
-    # wrap xml element
-    return 
-          "<$lhs>" 
-        . join( "", map { ref $_ eq "ARRAY" ? join "", @$_ : $_ } grep { defined } @_ ) 
-        . "</$lhs>";
-}
-
-sub show_parse_forest{
-    my $self = shift;
-    my $format = shift || 'text';
-
-    # POSSIBLE TODO: use start symbol to denote parse trees, if we extracted one
-    my $header = 'Parse Tree'; # $self->{start} 
-
-    my $forest = '';
-    for my $i (0..@{$self->{parse_forest}}-1){
-        $forest .= join '',
-            "# $header ", $i + 1, ":\n" ,
-            $self->show_parse_tree($self->{parse_forest}->[$i], $format) , 
-            "\n";
-    }
-    chomp $forest;
-    return $forest;
-}
-
-sub show_parse_tree{
-    my $self = shift;
-    my $tree = shift || $self->{parse_tree};
-    my $format = shift || 'text';
-    
-#    say Dump $tree;
-    
-    # if we have not $tree passed and there is a parse forest,
-    # then show_parse_forest in default format 
-    return $self->show_parse_forest if not defined $tree and $self->{parse_forest};
-    
-    # tree proper
-    if (ref $tree eq "Tree::Simple"){
-        given ($format){
-            when ("text"){
-                return DumpTree( 
-                        $tree, $tree->getNodeValue,
-                        DISPLAY_ADDRESS => 0,
-                        DISPLAY_OBJECT_TYPE => 0,
-                        FILTER => \&filter
-                    );
-            }
-            when ("html"){
-                my $tree_view = Tree::Simple::View::HTML->new($tree);    
-                return $tree_view->expandAll();
-            }
-            when ("dhtml"){
-                my $tree_view = Tree::Simple::View::DHTML->new($tree);    
-                return 
-                      $tree_view->javascript()
-                    . $tree_view->expandAll();
-            }
-        }
-    }
-    # data structure
-    elsif (ref $tree ~~ [ "ARRAY", "HASH" ] ){
-        return DumpTree($tree, "tree",
-            DISPLAY_ADDRESS => 0,
-            DISPLAY_OBJECT_TYPE => 0,
-        )
-    }
-    # utf8 string, must be XML
-    elsif (is_utf8($tree) and index ($tree, "<\?xml/") >= 0) {
-        my $t = XML::Twig->new(pretty_print => 'indented');
-        $t->parse($tree);
-        return $t->sprint;
-    }
-    # mere scalar
-    else{
-        return $tree;
-    }
 }
 
 # =======
@@ -1095,8 +803,8 @@ sub parse{
         my $value = $value_ref ? ${$value_ref} : 'No parse';
         # use dumper based on default_action
         my $value_dump = ref $value ? 
-            $self->{default_action} eq __PACKAGE__ . '::tree' ?
-                $self->show_parse_tree($value, 'text') 
+            $self->{default_action} eq 'MarpaX::Parse::Tree::tree' ?
+                $self->{tree_package}->show_parse_tree($value, 'text') 
                 :
                 Dump $value
             :
@@ -1105,7 +813,7 @@ sub parse{
         next if exists $values{$value_dump};
         # save unique parses for return
         # prepend xml prolog and encode to utf8 if we need to return an XML string
-        if ($self->{default_action} eq __PACKAGE__ . '::xml'){
+        if ($self->{default_action} eq 'MarpaX::Parse::Tree::xml'){
             $value = '<?xml version="1.0"?>' . "\n" . $value;
             # enforce strict encoding (UTF-8 rather than utf8)
             $value = encode("UTF-8", $value);
@@ -1117,19 +825,33 @@ sub parse{
     
     # set up the return value and parse tree/forest reference    
     if (wantarray){         # mupltiple parses are expected
-        $self->{parse_forest} = \@values;
+        $self->{tree_package}->{parse_forest} = \@values;
         return @values;
     }
     elsif (@values > 1){    # single parse is expected, but we have many, 
-        $self->{parse_forest} = \@values;
+        $self->{tree_package}->{parse_forest} = \@values;
         return \@values;    # hence the array ref
     }
     else {
-        $self->{parse_tree} = $values[0];
+        $self->{tree_package}->{parse_tree} = $values[0];
         return $values[0];  # single parse is expected and we have just it
                             # hence the scalar
     }
     
 }
+
+#
+# TODO: compatibility-only, both to be deleted
+#
+sub show_parse_tree{
+    my $self = shift;
+    $self->{tree_package}->show_parse_tree(@_);
+}
+
+sub show_parse_forest{
+    my $self = shift;
+    $self->{tree_package}->show_parse_forest(@_);
+}
+
 
 1;

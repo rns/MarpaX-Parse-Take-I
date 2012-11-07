@@ -9,6 +9,8 @@ use YAML;
 
 use Marpa::R2;
 
+use MarpaX::Parse::Tree;
+
 use Math::Combinatorics;
 
 use Clone qw(clone);
@@ -44,7 +46,7 @@ sub new{
     }
     # set defaults
     $self->{quantifier_rules}               //= 'sequence';
-    
+
     return $self;
 }
 
@@ -417,6 +419,26 @@ sub _extract_lexer_rules
 #    $self->show_option('literals');
     $self->{lexer_rules} = $lr;
     return $lr;
+}
+
+sub _set_default_action
+{
+    my $self = shift;
+    
+    my $options = shift;
+    
+    # if default action exists in MarpaX::Parse::Tree package then use it
+    my $da = $options->{default_action};
+    if (defined $da){
+        if (exists $MarpaX::Parse::Tree::{$da}){
+            $options->{default_action} = 'MarpaX::Parse::Tree::' . $da;
+        }
+    }
+    # otherwise set _default_action which prints the rules and their contents
+    else{
+        $options->{default_action} = 'MarpaX::Parse::Tree::' . 'AoA';
+    }
+    $self->{default_action} = $options->{default_action};
 }
 
 1;
