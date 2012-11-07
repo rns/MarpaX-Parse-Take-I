@@ -28,6 +28,133 @@ use XML::Twig;
 
 use Clone qw(clone);
 
+=pod distro module layout
+
+# 
+use MarpaX::Parse;
+
+my $p = MarpaX::Parse->new( {  
+    rules => q{} 
+    ...
+} ) or die "can't create parser";
+
+my $output = $p->parse( $input );
+
+#
+
+my $out = MarpaX::Parse->new( {  rules => q{} } )->parse( $in );
+
+MarpaX::Parse
+    
+    grammar
+    
+    sub new{
+        ref $rules eq 
+            "ARRAY" # Marpa::R2::Grammar
+            "HASH"
+            "" = textual grammar: 
+            first try to parse it with BNF; if this fails, then with EBNF 
+            to have $rules which will be fed to MarpaX::Parse::Grammar       
+
+    sub grammar {
+
+    sub recognition_failure {
+    sub parse{
+    sub show_parse_forest{
+    sub show_parse_tree{
+
+MarpaX::Parse::Grammar
+    
+    grammar = Marpa::R2::Grammar
+    
+    sub _build {
+    
+    sub _extract_start_symbol
+    sub _set_default_action
+    sub _closures_to_actions
+    sub _quantifiers_to_rules   # if there are quantifiers, e.g. symbol+
+    sub merge_token_rules {     # add rules to the grammar and re-build()
+    sub _extract_terminals
+    sub _extract_symbols
+
+    MarpaX::Parse::Grammar::BNF->can(build)
+    MarpaX::Parse::Grammar::EBNF->can(build)
+
+MarpaX::Parse::Lexer 
+    # supposed to be called from MarpaX::Parse::parse()
+    # when it has scalar $input
+    
+    new (MarpaX::Parse::Grammar)
+    
+    sub _extract_lexer_rules
+    sub _rule_signature
+    sub _action_name
+    sub lex
+
+MarpaX::Parse::Tree
+    
+    # subs in this package will be used to build parse trees
+    # for MarpaX::Parse::Grammar
+    
+    sub AoA { 
+    sub HoA { 
+    sub HoH { 
+    sub AoA_with_rule_signatures { 
+    sub sexpr { 
+    sub tree { 
+    sub filter
+    sub xml {
+    
+    sub show
+    sub traverse
+    sub transform
+    
+MarpaX::Parse::NLP
+    
+    5W+H+Vs
+    
+    lex input as for NM
+    tokenize ($input, $features_provider)
+        augment grammar
+    parse
+    
+    MarpaX::Parse::NLP::Grammar
+        MarpaX::Parse::RU::Grammar
+        MarpaX::Parse::EN::Grammar
+#
+MarpaX::Parse::Util -- Debug::Msg
+    
+    sub _dump {
+
+MarpaX::Parse::Options
+    
+    new (MarpaX::Parse)
+    
+    sub _token_string {
+    sub set_option{
+    sub get_option{
+    sub comment_option {
+    sub show_option{
+    sub show_parsed_bnf_rules      
+    sub show_transformed_bnf_rules 
+    sub show_closures              
+    sub show_bnf_tokens            
+    sub show_bnf_rules             
+    sub show_bnf_closures          
+    sub show_tokens                
+    sub show_rules                 
+    sub show_symbols               
+    sub show_terminals             
+    sub show_lexer_rules           
+    sub show_literals              
+    sub show_lexer_regexes         
+    sub show_recognition_failures  
+
+    sub _bnf_to_rules
+    sub _ebnf_to_rules
+
+=cut
+
 =head1 DESCRIPTION
 
 =cut
@@ -1299,7 +1426,6 @@ sub recognition_failure {
     # undef will lead to die()
     return "true";
 }
-
 
 sub parse{
 
