@@ -28,77 +28,8 @@ use XML::Twig;
 
 use Clone qw(clone);
 
-=head1 Synopsys
+=head1 DESCRIPTION
 
-input and output, e.g. 
-    input: decimal number
-    output: power series of that number
-
-rules
-    - BNF grammar (scalar); or 
-    - Marpa::R2 rules array ref
-
-actions
-    - can be deferred until parsing    
-
-grammar
-
-    BNF parsing 
-
-        $bnf_parser
-        produces parsed rules to be transformed into Marpa::R2 rules 
-
-    rules transformation    
-        produces transformed rules; includes
-        - closures extraction
-        - adding rules for quantifier symbols
-        - default_action and start rule setting 
-        - lexer rules extraction (literals)
-    
-    Marpa::R2::Grammar
-        -- its rules become the value of 'rules' options 
-
-parsing of input    
-    
-    input can be 
-        - scalar (string); or 
-        - arrays of tokens (unambiguous or ambiguous)
-
-    lexing
-        scalar input is lexed by 
-            pre-lexing
-                - extrating literals from the grammar
-                - setting them up as regex => token name hash
-            lexing
-                - matching input and consuming the longest match
-        tokens    
-    
-    recognizing (Marpa::R2)
-        produces Marpa::R2 parse tree
-        
-    evaluation (Marpa::R2)
-        produces parse value that can be 
-            - final value
-            - tree to be evaluated by the application
-    
-evaluation of parse by the application
-    
-    default_action settings produce parse trees:
-    
-        - 'tree'    Tree::Simple 
-        - 'xml'     XML string
-        - 'sexpr'   S-expression
-        - 'AoA'     array of array
-        - 'HoA'     hash of arrays
-        - 'HoH'     hash of arrays
-    
-    that can be further evaluated by the application 
-    
-    Details are in 
-        10_parse_tree_simple.t
-        11_parse_tree_xml.t
-        13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t
-    
 =cut
 
 #
@@ -164,22 +95,6 @@ my $MarpaX_Parse_options = {
     ebnf => undef,
 };
 
-#
-# BNF parser needs to be package variable of MarpaX::Parse
-# to prevent repeated transformation of its rules
-#   
-# BNF parser grammar setup
-my $bnf_parser = MarpaX::Parse->new({ 
-    rules => MarpaX::Parse::BNF::rules,
-    default_action => 'AoA',
-});
-
-# EBNF parser grammar setup
-my $ebnf_parser = MarpaX::Parse->new({ 
-    rules => MarpaX::Parse::EBNF::rules,
-    default_action => 'AoA',
-});
-
 sub new{
 
     my $class = shift;
@@ -193,7 +108,13 @@ sub new{
     return $self;
 }
 
-sub build{
+#
+# extract Marpa::R2::(Grammar|Recornizer) options 
+# parse (E)BNF if needed
+# transform rules
+# set and precomute() grammar
+#
+sub build {
     
     my $self = shift;
     
@@ -316,46 +237,15 @@ sub _dump {
     $stack_trace ? cluck $dump : say $dump;
 }
 
-#
-# get current options (as-passed), get rules from them, merge new rules, 
-# and rebuild MarpaX::Parse
-# 
-sub merge_token_rules { 
-    
-    my $self = shift;
-
-    my $token_rules = shift;
-
-    # get initial options
-    my $options = $self->{options};
-    
-    # $token_rules and $options->{rules} need to be both array refs or scalars (strings)
-    if (ref $token_rules eq "ARRAY" and ref $options->{rules} eq "ARRAY"){
-        # merge arrays
-        push @{ $options->{rules} }, @$token_rules;
-        
-    }
-    elsif (ref $token_rules eq "" and ref $options->{rules} eq ""){
-        # merge texts
-        $options->{rules} .= $token_rules;
-    }
-    
-    # rebuild
-    $self->build($options);
-}
+# =========
+# accessors
+# =========
 
 sub grammar { $_[0]->{grammar} }
 
-# set the value to {$option} key to be printed if "show_$option" is set in the constructor
-sub set_option{
-
-    my $self = shift;
-
-    my $option = shift;
-    my $value = shift;
-
-    $self->{"$option"} = $value;
-}
+# =================================
+# options getting, setting, showing
+# =================================
 
 # stringify tokens as name[ name]: value
 sub _token_string {
@@ -374,6 +264,17 @@ sub _token_string {
     }
     
     return $_token_string;
+}
+
+# set the value to {$option} key to be printed if "show_$option" is set in the constructor
+sub set_option{
+
+    my $self = shift;
+
+    my $option = shift;
+    my $value = shift;
+
+    $self->{"$option"} = $value;
 }
 
 # return show_$option value or say show_$option's value if show_$option is set to true in the constructor
@@ -479,6 +380,26 @@ sub show_lexer_regexes          { $_[0]->get_option('lexer_regexes') }
 
 sub show_recognition_failures   { $_[0]->get_option('recognition_failures') }
 
+# =============================
+# parsing BNF and EBNF to rules
+# =============================
+
+#
+# BNF and EBNF parsers need to be package variables of MarpaX::Parse
+# to prevent repeated transformation of their rules
+#   
+# BNF parser grammar setup
+my $bnf_parser = MarpaX::Parse->new({ 
+    rules => MarpaX::Parse::BNF::rules,
+    default_action => 'AoA',
+});
+
+# EBNF parser grammar setup
+my $ebnf_parser = MarpaX::Parse->new({ 
+    rules => MarpaX::Parse::EBNF::rules,
+    default_action => 'AoA',
+});
+
 # parse BNF to what will become Marpa::R2 rules after transformation 
 # (extraction of closures, adding rules for quantifiers, extraction of lexer rules, etc.)
 sub _bnf_to_rules
@@ -552,6 +473,92 @@ sub _ebnf_to_rules
     return $rules;
 }
 
+# =======================
+# grammar rule transforms
+# =======================
+
+sub _extract_start_symbol
+{
+    my $self = shift;
+    
+    my $rules = shift;
+    
+    my $rule0 = $rules->[0];
+    
+    my $start = ref $rule0 eq "HASH" ? $rule0->{lhs} : $rule0->[0];
+    $self->{start} = $start;
+    
+    return $start;
+}
+
+sub _set_default_action
+{
+    my $self = shift;
+    
+    my $options = shift;
+    
+    # if default action exists in this package then use it
+    my $da = $options->{default_action};
+    if (defined $da){
+        if (exists $MarpaX::Parse::{$da}){
+            $options->{default_action} = __PACKAGE__ . '::' . $da;
+        }
+    }
+    # otherwise set _default_action which prints the rules and their contents
+    else{
+        $options->{default_action} = __PACKAGE__ . '::' . 'AoA';
+    }
+    $self->{default_action} = $options->{default_action};
+}
+
+sub _closures_to_actions
+{
+    my $rules = shift;
+    
+#    say "# _closures_to_actions: rules:\n", Dump $rules;
+    
+    my $closures = {};
+    
+    for my $rule (@$rules){
+        my ($lhs, $rhs, $closure);
+        given (ref $rule){
+            when ("HASH"){
+                # get the rule's parts
+                $lhs = $rule->{lhs};
+                $rhs = $rule->{rhs};
+                $closure = $rule->{action};
+                # we need anonymous subs and not the action names
+                if (defined $closure and ref $closure eq "CODE"){
+                    # make action name
+                    my $an = _action_name($lhs, $rhs);
+                    # replace closure with action name
+                    $closures->{$an} = $closure;
+                    # add closure for recognizer
+                    $rule->{action}  = $an;
+                }
+            }
+            when ("ARRAY"){
+                # get the rule's parts
+                ($lhs, $rhs, $closure) = @$rule;
+                # we need anonymous subs and not the action names
+                if (defined $closure  and ref $closure eq "CODE"){
+                    # make action name
+                    my $an = _action_name($lhs, $rhs);
+                    # replace closure with action name
+                    $rule->[-1]      = $an;
+                    # add closure for recognizer
+                    $closures->{$an} = $closure;
+                }
+            }
+        }
+        
+    }
+    
+#    say "# _closures_to_actions: closures:\n", Dump $closures;
+    
+    return $closures;
+}
+
 =head2
     
     For each symbol ending with * or + add a Marpa sequence rule 
@@ -564,6 +571,7 @@ sub _ebnf_to_rules
     Several symbols may be zero (? *)-quantified and all needed rules will be added.
     
 =cut
+
 sub _quantifiers_to_rules
 {   
     my $self = shift;
@@ -759,39 +767,37 @@ sub _quantifiers_to_rules
     
 }
 
-sub _extract_start_symbol
-{
+#
+# get current options (as-passed), get rules from them, merge new rules, 
+# and rebuild MarpaX::Parse
+# 
+sub merge_token_rules { 
+    
     my $self = shift;
+
+    my $token_rules = shift;
+
+    # get initial options
+    my $options = $self->{options};
     
-    my $rules = shift;
+    # $token_rules and $options->{rules} need to be both array refs or scalars (strings)
+    if (ref $token_rules eq "ARRAY" and ref $options->{rules} eq "ARRAY"){
+        # merge arrays
+        push @{ $options->{rules} }, @$token_rules;
+        
+    }
+    elsif (ref $token_rules eq "" and ref $options->{rules} eq ""){
+        # merge texts
+        $options->{rules} .= $token_rules;
+    }
     
-    my $rule0 = $rules->[0];
-    
-    my $start = ref $rule0 eq "HASH" ? $rule0->{lhs} : $rule0->[0];
-    $self->{start} = $start;
-    
-    return $start;
+    # rebuild
+    $self->build($options);
 }
 
-sub _set_default_action
-{
-    my $self = shift;
-    
-    my $options = shift;
-    
-    # if default action exists in this package then use it
-    my $da = $options->{default_action};
-    if (defined $da){
-        if (exists $MarpaX::Parse::{$da}){
-            $options->{default_action} = __PACKAGE__ . '::' . $da;
-        }
-    }
-    # otherwise set _default_action which prints the rules and their contents
-    else{
-        $options->{default_action} = __PACKAGE__ . '::' . 'AoA';
-    }
-    $self->{default_action} = $options->{default_action};
-}
+# =========================
+# lexer building and lexing
+# =========================
 
 # lexer rules are derived from literal terminals, which can be 
 # strings or qr// patterns in single or double quotes
@@ -890,53 +896,112 @@ sub _action_name
     return "action(" . _rule_signature(@_) . ")";
 }
 
-sub _closures_to_actions
+# TODO: pluggable lexer (Parse::Flex, etc.)
+sub lex
 {
-    my $rules = shift;
+    my $self = shift;
     
-#    say "# _closures_to_actions: rules:\n", Dump $rules;
+#    say "# lexing: ", Dump \@_;
     
-    my $closures = {};
+    my $input = shift;
     
-    for my $rule (@$rules){
-        my ($lhs, $rhs, $closure);
-        given (ref $rule){
-            when ("HASH"){
-                # get the rule's parts
-                $lhs = $rule->{lhs};
-                $rhs = $rule->{rhs};
-                $closure = $rule->{action};
-                # we need anonymous subs and not the action names
-                if (defined $closure and ref $closure eq "CODE"){
-                    # make action name
-                    my $an = _action_name($lhs, $rhs);
-                    # replace closure with action name
-                    $closures->{$an} = $closure;
-                    # add closure for recognizer
-                    $rule->{action}  = $an;
-                }
-            }
-            when ("ARRAY"){
-                # get the rule's parts
-                ($lhs, $rhs, $closure) = @$rule;
-                # we need anonymous subs and not the action names
-                if (defined $closure  and ref $closure eq "CODE"){
-                    # make action name
-                    my $an = _action_name($lhs, $rhs);
-                    # replace closure with action name
-                    $rule->[-1]      = $an;
-                    # add closure for recognizer
-                    $closures->{$an} = $closure;
-                }
+    my $lex = shift || $self->{lexer_rules};
+
+    $self->set_option('input', $input);
+    $self->show_option('input');
+   
+    $self->show_option('rules');
+    $self->show_option('symbols');
+    $self->show_option('terminals');
+    $self->show_option('literals');
+
+    $self->show_option('lexer_rules');
+
+    # TODO: add 'default' rule (as in given/when) to apply when 
+    # none of the other rules matched (for BNF parsing)
+
+    # make regexes of strings and qr// in strings leaving regexes proper as is
+    my $lex_re = {};
+    for my $l (keys %$lex){
+#say "terminal: <$l>";    
+        my $l_re = $l;
+        if ($l =~ /^\Q(?^:\E/){
+#say "regex: $l";
+        }
+        elsif ($l =~ m{^qr/.*?/\w*$}){
+#say "qr in string: $l";
+            $l_re = eval $l;
+        }
+        else{
+#say "string: $l";
+            $l_re = qr/\Q$l\E/;
+        }
+        $lex_re->{$l_re} = $lex->{$l};
+    }
+    $self->{lexer_regexes} = $lex_re;
+    chomp $self->{lexer_regexes};
+    $self->show_option('lexer_regexes');
+
+    my $tokens = [];
+    my $i;
+
+    my $max_iterations = 1000000;
+
+    $self->show_option('show_input');
+        
+    while ($i++ < $max_iterations){
+        # trim input start
+        $input =~ s/^\s+//s;
+        $input =~ s/^\s+//s;
+#say "# input: <$input>";
+        # match reach regex at string beginning
+        my $matches = {};
+        for my $re (keys %$lex_re){
+            if ($input =~ /^($re)/){
+#say "match: $re -> '$1'";
+                $matches->{$1}->{$lex_re->{$re}} = undef;
             }
         }
-        
+#say Dump $matches;
+        # no matches means the end of lexing
+        my @matches = keys %$matches;
+        last unless @matches;
+        # sort matches by length (longest first)
+        @matches = sort { length $b <=> length $a } @matches;
+        # get longest match(es)
+        my $max_len = length $matches[0];
+        my @max_len_tokens = grep { length $_ eq $max_len } @matches;
+        # set [ token_name, token_value ] pairs
+        my @matched_tokens;
+        # get token names of token values
+        for my $token_value (@max_len_tokens){
+            my @token_names = keys %{ $matches->{$token_value} };
+            for my $token_name (@token_names){
+    #            say "$token_name, $token_value";
+                push @matched_tokens, [ $token_name, $token_value ];
+            }
+        }
+        if (@matched_tokens > 1){ # ambigious tokens
+            push @$tokens, \@matched_tokens;
+        }
+        else{
+            push @$tokens, $matched_tokens[0];
+        }
+
+        # trim the longest match from the string start
+        $input =~ s/^\Q$max_len_tokens[0]\E//;
     }
+    warn "This must have been an infinite loop: maximum interations count $max_iterations exceeded" if $i > $max_iterations;
+    push @$tokens, [ '::any', $input ] if $input;
     
-#    say "# _closures_to_actions: closures:\n", Dump $closures;
+    $self->{tokens} = $tokens;
     
-    return $closures;
+    return $tokens;
 }
+
+# ======================================
+# default actions (building parse trees)
+# ======================================
 
 sub AoA { 
 
@@ -1200,108 +1265,9 @@ sub show_parse_tree{
     }
 }
 
-# TODO: pluggable lexer (Parse::Flex, etc.)
-sub lex
-{
-    my $self = shift;
-    
-#    say "# lexing: ", Dump \@_;
-    
-    my $input = shift;
-    
-    my $lex = shift || $self->{lexer_rules};
-
-    $self->set_option('input', $input);
-    $self->show_option('input');
-   
-    $self->show_option('rules');
-    $self->show_option('symbols');
-    $self->show_option('terminals');
-    $self->show_option('literals');
-
-    $self->show_option('lexer_rules');
-
-    # TODO: add 'default' rule (as in given/when) to apply when 
-    # none of the other rules matched (for BNF parsing)
-
-    # make regexes of strings and qr// in strings leaving regexes proper as is
-    my $lex_re = {};
-    for my $l (keys %$lex){
-#say "terminal: <$l>";    
-        my $l_re = $l;
-        if ($l =~ /^\Q(?^:\E/){
-#say "regex: $l";
-        }
-        elsif ($l =~ m{^qr/.*?/\w*$}){
-#say "qr in string: $l";
-            $l_re = eval $l;
-        }
-        else{
-#say "string: $l";
-            $l_re = qr/\Q$l\E/;
-        }
-        $lex_re->{$l_re} = $lex->{$l};
-    }
-    $self->{lexer_regexes} = $lex_re;
-    chomp $self->{lexer_regexes};
-    $self->show_option('lexer_regexes');
-
-    my $tokens = [];
-    my $i;
-
-    my $max_iterations = 1000000;
-
-    $self->show_option('show_input');
-        
-    while ($i++ < $max_iterations){
-        # trim input start
-        $input =~ s/^\s+//s;
-        $input =~ s/^\s+//s;
-#say "# input: <$input>";
-        # match reach regex at string beginning
-        my $matches = {};
-        for my $re (keys %$lex_re){
-            if ($input =~ /^($re)/){
-#say "match: $re -> '$1'";
-                $matches->{$1}->{$lex_re->{$re}} = undef;
-            }
-        }
-#say Dump $matches;
-        # no matches means the end of lexing
-        my @matches = keys %$matches;
-        last unless @matches;
-        # sort matches by length (longest first)
-        @matches = sort { length $b <=> length $a } @matches;
-        # get longest match(es)
-        my $max_len = length $matches[0];
-        my @max_len_tokens = grep { length $_ eq $max_len } @matches;
-        # set [ token_name, token_value ] pairs
-        my @matched_tokens;
-        # get token names of token values
-        for my $token_value (@max_len_tokens){
-            my @token_names = keys %{ $matches->{$token_value} };
-            for my $token_name (@token_names){
-    #            say "$token_name, $token_value";
-                push @matched_tokens, [ $token_name, $token_value ];
-            }
-        }
-        if (@matched_tokens > 1){ # ambigious tokens
-            push @$tokens, \@matched_tokens;
-        }
-        else{
-            push @$tokens, $matched_tokens[0];
-        }
-
-        # trim the longest match from the string start
-        $input =~ s/^\Q$max_len_tokens[0]\E//;
-    }
-    warn "This must have been an infinite loop: maximum interations count $max_iterations exceeded" if $i > $max_iterations;
-    push @$tokens, [ '::any', $input ] if $input;
-    
-    $self->{tokens} = $tokens;
-    
-    return $tokens;
-}
+# =======
+# parsing
+# =======
 
 # recognition failures are not necessarily fatal so by default, 
 # this sub will be called to get the most out of the recognizer and set that 
