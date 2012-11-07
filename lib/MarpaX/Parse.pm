@@ -18,6 +18,8 @@ use Tree::Simple::View::HTML;
 use Data::TreeDumper;
 
 use MarpaX::Parse::Grammar;
+use MarpaX::Parse::Lexer;
+
 use MarpaX::Parse::BNF;
 use MarpaX::Parse::EBNF;
 
@@ -74,9 +76,14 @@ MarpaX::Parse::Grammar
     sub _set_default_action
     sub _closures_to_actions
     sub _quantifiers_to_rules   # if there are quantifiers, e.g. symbol+
-    sub merge_token_rules {     # add rules to the grammar and re-build()
+    sub _rule_signature
+    sub _action_name
+
     sub _extract_terminals
     sub _extract_symbols
+
+    sub merge_token_rules {     # add rules to the grammar and re-build()
+
 
     MarpaX::Parse::Grammar::BNF->can(build)
     MarpaX::Parse::Grammar::EBNF->can(build)
@@ -88,8 +95,6 @@ MarpaX::Parse::Lexer
     new (MarpaX::Parse::Grammar)
     
     sub _extract_lexer_rules
-    sub _rule_signature
-    sub _action_name
     sub lex
 
 MarpaX::Parse::Tree
@@ -210,16 +215,16 @@ my $MarpaX_Parse_options = {
     show_recognition_failures => undef,
     recognition_failure_sub => undef,
 
-    # transform quantified symbols into sequence (by default) or recursive rules
-    quantifier_rules => undef,
-    
-    # if true, nullable symbols will be added instead removing the rules 
-    # with ?/*-quanfitied symbols
-    nullables_for_quantifiers => undef,
-    
     # handle ambuous tokens with input model (alternate()/earleme_complete()
     ambiguity => undef,
     
+    # transform quantified symbols into sequence (by default) or recursive rules
+    quantifier_rules => undef,
+
+    # if true, nullable symbols will be added instead removing the rules 
+    # with ?/*-quanfitied symbols
+    nullables_for_quantifiers => undef,
+
     ebnf => undef,
 };
 
@@ -247,6 +252,10 @@ sub build {
     my $self = shift;
     
     my $options = shift;
+    
+    # set up and save the grammar
+    my $g = MarpaX::Parse::Grammar->new(clone $options);
+    $self->{g} = $g;
     
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
@@ -307,10 +316,10 @@ sub build {
     }
 
     # quantifiers to rules
-    $self->_quantifiers_to_rules( \@rules );
+    $g->_quantifiers_to_rules( \@rules );
 
     # extract closures and generate actions for Recognizer
-    my $closures = _closures_to_actions( \@rules );
+    my $closures = $g->_closures_to_actions( \@rules );
     $self->{closures} = $closures;
 
     # handle default action
@@ -318,7 +327,7 @@ sub build {
     
     # set start to lhs of the first rule if not set
     if (not exists $options->{start}){
-        $options->{start} = $self->_extract_start_symbol( \@rules );
+        $options->{start} = $g->_extract_start_symbol( \@rules );
     }
 
     # save transformed rules for further adding to them 
@@ -333,6 +342,7 @@ sub build {
     
     # save the grammar
     $self->{grammar} = $grammar;
+    $self->{g}->{grammar} = $grammar;
     
     # set rules option
     $self->set_option('rules', $grammar->show_rules);
@@ -342,11 +352,14 @@ sub build {
         $self->set_option('bnf_rules', $grammar->show_rules);
     }
     
+    # TODO: the below 2 calls need to be moved to MarpaX::Parse::Grammar 
+    # once {rules} are fully there
+
     # extract save terminals for lexing
-    my $terminals = $self->_extract_terminals( \@rules, $grammar );
+    $self->{g}->{terminals} = $g->_extract_terminals( \@rules, $grammar );
     
     # extract and save lexer rules
-    $self->set_option('lexer_rules', $self->_extract_lexer_rules( $options->{rules} ) );
+    $self->set_option('lexer_rules', $g->_extract_lexer_rules( $options->{rules} ) );
 }
 
 # print a variable with comment and stack trace
@@ -605,20 +618,6 @@ sub _ebnf_to_rules
 # grammar rule transforms
 # =======================
 
-sub _extract_start_symbol
-{
-    my $self = shift;
-    
-    my $rules = shift;
-    
-    my $rule0 = $rules->[0];
-    
-    my $start = ref $rule0 eq "HASH" ? $rule0->{lhs} : $rule0->[0];
-    $self->{start} = $start;
-    
-    return $start;
-}
-
 sub _set_default_action
 {
     my $self = shift;
@@ -637,262 +636,6 @@ sub _set_default_action
         $options->{default_action} = __PACKAGE__ . '::' . 'AoA';
     }
     $self->{default_action} = $options->{default_action};
-}
-
-sub _closures_to_actions
-{
-    my $rules = shift;
-    
-#    say "# _closures_to_actions: rules:\n", Dump $rules;
-    
-    my $closures = {};
-    
-    for my $rule (@$rules){
-        my ($lhs, $rhs, $closure);
-        given (ref $rule){
-            when ("HASH"){
-                # get the rule's parts
-                $lhs = $rule->{lhs};
-                $rhs = $rule->{rhs};
-                $closure = $rule->{action};
-                # we need anonymous subs and not the action names
-                if (defined $closure and ref $closure eq "CODE"){
-                    # make action name
-                    my $an = _action_name($lhs, $rhs);
-                    # replace closure with action name
-                    $closures->{$an} = $closure;
-                    # add closure for recognizer
-                    $rule->{action}  = $an;
-                }
-            }
-            when ("ARRAY"){
-                # get the rule's parts
-                ($lhs, $rhs, $closure) = @$rule;
-                # we need anonymous subs and not the action names
-                if (defined $closure  and ref $closure eq "CODE"){
-                    # make action name
-                    my $an = _action_name($lhs, $rhs);
-                    # replace closure with action name
-                    $rule->[-1]      = $an;
-                    # add closure for recognizer
-                    $closures->{$an} = $closure;
-                }
-            }
-        }
-        
-    }
-    
-#    say "# _closures_to_actions: closures:\n", Dump $closures;
-    
-    return $closures;
-}
-
-=head2
-    
-    For each symbol ending with * or + add a Marpa sequence rule 
-    with lhs being the symbol, rhs being symbols without the quantifier 
-    the min => 0 or min => 1, respectively
-    
-    For each symbol ending with ?, add a new rule without such symbol
-    and remove ? from the symbol's end. 
-    
-    Several symbols may be zero (? *)-quantified and all needed rules will be added.
-    
-=cut
-
-sub _quantifiers_to_rules
-{   
-    my $self = shift;
-    
-    my $rules = shift;
-    
-#    say "# rules ", Dump $rules;
-    
-    # symbols quantified with * or + require adding sequence rules
-    my $quantified_symbol_rules = [];
-
-    # symbols quantified with * or ? require adding rules without such symbols
-    # more than one symbol per rules can be  * or ? quantified hence 
-    # $nullable_symbol_indices->{quantified_rule_index}->{nullable_symbol_index}
-    my $nullable_symbol_indices = {};
-    
-    # prevent duplication of sequence rules' lhs 
-    my $sequence_lhs = {}; 
-
-    # process rules
-    for my $j (0..@$rules-1){
-        my $rule = $rules->[$j];
-#        say "# rule ", Dump $rule;
-        # get lhs and rhs
-        my ($lhs, $rhs);
-        given (ref $rule){
-            when ("HASH"){
-                $lhs = $rule->{lhs};
-                $rhs = $rule->{rhs};
-            }
-            when ("ARRAY"){
-                ($lhs, $rhs) = @$rule;
-            }
-        }
-#        say "# $lhs -> ", Dump $rhs;
-        # check symbols ending with quantifiers
-        for my $i (0..@$rhs-1){
-            my $symbol = $rhs->[$i];
-            # TODO: better checking for regexes (\d+)
-            if ($symbol =~ m/(\?|\*|\+)$/ and $symbol !~ m{\\}){
-                my $quantifier = $1;
-#                say "$quantifier, $rhs->[$i]";
-                # setup sequence item ($symbol without quantifier)
-                my $non_quantified_symbol = $symbol;
-                $non_quantified_symbol =~ s/\Q$quantifier\E$//;
-#                say "$quantifier, $rhs->[$i], $symbol";
-                # dispatch on quantifier
-                given ($quantifier){
-                    when ("?"){
-#                        say "# zero or one ", Dump $rule;
-                        # set rule's nullable symbol indices
-                        $nullable_symbol_indices->{$j}->{$i} = undef;
-                        # replace quantified symbol to non-quantified in the rule
-                        $rhs->[$i] = $non_quantified_symbol;
-                    }
-                    # add min => 0 or min => 1 sequence 
-                    when ([qw(* +)]){
-                        
-                        # sequence lhs must be unique
-                        unless (exists $sequence_lhs->{$symbol} ){
-                            if ($self->{quantifier_rules} eq 'recursive'){
-#                                say "sequences as recursive rules";
-                                my $item = $non_quantified_symbol;
-                                my $seq = $symbol;
-                                # seq ::= item
-                                push @$quantified_symbol_rules, { 
-                                    lhs     => $seq,
-                                    rhs     => [ $item ],
-                                    action  => sub { 
-                                        [ $_[1] ];
-                                    },
-                                };
-                                # seq ::= item seq
-                                push @$quantified_symbol_rules, { 
-                                    lhs     => $seq,
-                                    rhs     => [ $seq, $item ],
-                                    action  => sub { 
-                                        if (ref $_[1] eq "" and ref $_[2] eq ""){
-                                            return ($_[1] ? $_[1] : '') . ($_[2] ? $_[2] : '');
-                                        }
-                                        else{
-                                            push @{ $_[1] }, $_[2];
-                                        }
-                                        return $_[1];
-                                    },
-                                };
-                            }
-                            else{
-#                                say "sequences as sequence rules";
-                                push @$quantified_symbol_rules, { 
-                                    lhs => $symbol,
-                                    rhs => [ $non_quantified_symbol ],
-                                    min => $quantifier eq '+' ? 1 : 0,
-#                                    action => sub { 
-                                        # strip per-parse variable
-#                                        shift;
-    #                                    say Dump \@_;
-    #                                    say defined @_;
-    #                                    say join '', @_;
-                                        # return empty array ref rather than undef for null (zero-item) sequences
-#                                        \@_;
-#                                    },
-                                };
-                            }
-                            $sequence_lhs->{$symbol} = undef;
-                        }
-                        # set rule's nullable symbol indices
-                        if ($quantifier eq '*'){
-                            $nullable_symbol_indices->{$j}->{$i} = undef;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    # add rules for quantified symbols
-#    say Dump $quantified_symbol_rules;
-    push @$rules, @$quantified_symbol_rules;
-
-    # just add [ nullable_symbol => [] ] rules if the options are set
-    if ($self->{nullables_for_quantifiers}){
-        my @nullables;
-        my %nullables;
-        for my $j (keys %$nullable_symbol_indices){
-            my $rule = $rules->[$j];
-
-            my ($lhs, $rhs);
-            given (ref $rule){
-                when ("HASH"){
-                    $lhs = $rule->{lhs};
-                    $rhs = $rule->{rhs};
-                }
-                when ("ARRAY"){
-                    ($lhs, $rhs) = @$rule;
-                }
-            }
-
-            my @nullables = sort keys %{ $nullable_symbol_indices->{$j} };
-            for my $nullable (@nullables){
-#                say $rhs->[$nullable];
-                # avoid tule duplication
-                next if exists $nullables{ $rhs->[$nullable] };
-                push @$rules, [ $rhs->[$nullable] => [] ];
-                $nullables{ $rhs->[$nullable] } = undef;
-            }
-        }
-    }
-    else {
-        # generate and add rules with nullable symbols
-        my @rules_with_nullables;
-        for my $j (keys %$nullable_symbol_indices){
-            my $rule = $rules->[$j];
-
-            my ($lhs, $rhs);
-            given (ref $rule){
-                when ("HASH"){
-                    $lhs = $rule->{lhs};
-                    $rhs = $rule->{rhs};
-                }
-                when ("ARRAY"){
-                    ($lhs, $rhs) = @$rule;
-                }
-            }
-
-            my @nullables = sort keys %{ $nullable_symbol_indices->{$j} };
-            # generate the indices of symbols to null
-    #        say "$lhs -> @$rhs\nnullables:@nullables";
-            my @symbols_to_null;
-            for my $k (1..@nullables){
-                my @combinations = combine($k, @nullables);
-                push @symbols_to_null, \@combinations;
-    #            say "$k:", join ' | ', map { join ' ', @$_ } @combinations;
-            }
-            # generate nullables rhs by deleting nullable symbols according to generated indices
-            for my $combinations (@symbols_to_null){
-                # delete (null) nullable symbols
-                for my $combination (@$combinations){
-    #                say "@$combination";
-                    my @nullable_rhs = @$rhs;
-                    for my $index (@$combination){
-                        $nullable_rhs[$index] = undef;
-                    }
-                    @nullable_rhs = grep {defined} @nullable_rhs;
-    #                say "$lhs -> @nullable_rhs";
-                    push @rules_with_nullables, { lhs => $lhs, rhs => \@nullable_rhs };
-                }
-            }
-        }
-    #    say Dump \@rules_with_nullables;
-        push @$rules, @rules_with_nullables;
-    }
-    
 }
 
 #
@@ -921,210 +664,6 @@ sub merge_token_rules {
     
     # rebuild
     $self->build($options);
-}
-
-# =========================
-# lexer building and lexing
-# =========================
-
-# lexer rules are derived from literal terminals, which can be 
-# strings or qr// patterns in single or double quotes
-sub _extract_lexer_rules
-{
-    my $self = shift;
-    
-    my $rules = shift;
-    my $terminals = $self->{terminals};
-    
-    $self->show_option('rules');
-    $self->show_option('symbols');
-    $self->show_option('terminals');
-
-    my $lr = {};
-
-    # lexer rules are formed by terminals wrapped in single or double quotes
-    my @literals;
-    for my $terminal (@$terminals){
-#        say "# terminal:\n", $terminal;
-        if (
-            (substr($terminal, 0, 1) eq '"' and substr($terminal, -1) eq '"') or
-            (substr($terminal, 0, 1) eq "'" and substr($terminal, -1) eq "'")
-            ){
-            push @literals, $terminal;
-            my $literal = substr $terminal, 1, -1;
-#            say "# lexer rule: <$literal> -> <$terminal>";
-            $lr->{$literal} = $terminal;
-        }
-    }
-    # save and show literals if show_literals is set
-    $self->set_option('literals', join "\n", sort @literals );
-    $self->show_option('literals');
-    
-    return $lr;
-}
-
-sub _extract_terminals
-{
-    my $self = shift;
-    
-    my $rules = shift;
-    my $grammar = shift;
-    
-    my $symbols = $self->_extract_symbols($rules);
-    
-    my $terminals = [];
-    for my $symbol (keys %$symbols){
-        if ($grammar->check_terminal($symbol)){
-            push @$terminals, $symbol;
-        }
-    }
-    $self->{terminals} = $terminals;
-    
-    return $terminals;
-}
-
-sub _extract_symbols
-{
-    my $self = shift;
-    
-    my $rules = shift;
-    
-    my $symbols = {};
-    
-    for my $rule (@$rules){
-        my ($lhs, $rhs);
-        given (ref $rule){
-            when ("HASH"){
-                # get the rule's parts
-                $lhs = $rule->{lhs};
-                $rhs = $rule->{rhs};
-            }
-            when ("ARRAY"){
-                # get the rule's parts
-                ($lhs, $rhs) = @$rule;
-            }
-        }
-        for my $symbol ($lhs, @$rhs){
-            $symbols->{$symbol} = undef;
-        }
-    }
-    $self->{symbols} = $symbols;
-    
-    return $symbols;
-}
-
-sub _rule_signature
-{
-    my ($lhs, $rhs) = @_;
-    return "$lhs -> " . join ' ', @$rhs;
-}
-
-sub _action_name
-{
-    return "action(" . _rule_signature(@_) . ")";
-}
-
-# TODO: pluggable lexer (Parse::Flex, etc.)
-sub lex
-{
-    my $self = shift;
-    
-#    say "# lexing: ", Dump \@_;
-    
-    my $input = shift;
-    
-    my $lex = shift || $self->{lexer_rules};
-
-    $self->set_option('input', $input);
-    $self->show_option('input');
-   
-    $self->show_option('rules');
-    $self->show_option('symbols');
-    $self->show_option('terminals');
-    $self->show_option('literals');
-
-    $self->show_option('lexer_rules');
-
-    # TODO: add 'default' rule (as in given/when) to apply when 
-    # none of the other rules matched (for BNF parsing)
-
-    # make regexes of strings and qr// in strings leaving regexes proper as is
-    my $lex_re = {};
-    for my $l (keys %$lex){
-#say "terminal: <$l>";    
-        my $l_re = $l;
-        if ($l =~ /^\Q(?^:\E/){
-#say "regex: $l";
-        }
-        elsif ($l =~ m{^qr/.*?/\w*$}){
-#say "qr in string: $l";
-            $l_re = eval $l;
-        }
-        else{
-#say "string: $l";
-            $l_re = qr/\Q$l\E/;
-        }
-        $lex_re->{$l_re} = $lex->{$l};
-    }
-    $self->{lexer_regexes} = $lex_re;
-    chomp $self->{lexer_regexes};
-    $self->show_option('lexer_regexes');
-
-    my $tokens = [];
-    my $i;
-
-    my $max_iterations = 1000000;
-
-    $self->show_option('show_input');
-        
-    while ($i++ < $max_iterations){
-        # trim input start
-        $input =~ s/^\s+//s;
-        $input =~ s/^\s+//s;
-#say "# input: <$input>";
-        # match reach regex at string beginning
-        my $matches = {};
-        for my $re (keys %$lex_re){
-            if ($input =~ /^($re)/){
-#say "match: $re -> '$1'";
-                $matches->{$1}->{$lex_re->{$re}} = undef;
-            }
-        }
-#say Dump $matches;
-        # no matches means the end of lexing
-        my @matches = keys %$matches;
-        last unless @matches;
-        # sort matches by length (longest first)
-        @matches = sort { length $b <=> length $a } @matches;
-        # get longest match(es)
-        my $max_len = length $matches[0];
-        my @max_len_tokens = grep { length $_ eq $max_len } @matches;
-        # set [ token_name, token_value ] pairs
-        my @matched_tokens;
-        # get token names of token values
-        for my $token_value (@max_len_tokens){
-            my @token_names = keys %{ $matches->{$token_value} };
-            for my $token_name (@token_names){
-    #            say "$token_name, $token_value";
-                push @matched_tokens, [ $token_name, $token_value ];
-            }
-        }
-        if (@matched_tokens > 1){ # ambigious tokens
-            push @$tokens, \@matched_tokens;
-        }
-        else{
-            push @$tokens, $matched_tokens[0];
-        }
-
-        # trim the longest match from the string start
-        $input =~ s/^\Q$max_len_tokens[0]\E//;
-    }
-    warn "This must have been an infinite loop: maximum interations count $max_iterations exceeded" if $i > $max_iterations;
-    push @$tokens, [ '::any', $input ] if $input;
-    
-    $self->{tokens} = $tokens;
-    
-    return $tokens;
 }
 
 # ======================================
@@ -1501,7 +1040,8 @@ sub parse{
     } ## if (ref $input eq "ARRAY"){
     # strings are split
     else{
-        $tokens = $self->lex($input);
+        my $l = MarpaX::Parse::Lexer->new($self->{g});
+        $tokens = $l->lex($input);
     }
 
     $self->set_option('tokens', $tokens);

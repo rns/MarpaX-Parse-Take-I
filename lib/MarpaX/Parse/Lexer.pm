@@ -1,50 +1,16 @@
 package MarpaX::Parse::Lexer;
 
+use MarpaX::Parse::Grammar;
+
 sub new{
 
     my $class = shift;
-    my $options = shift;
+    my $grammar = shift;
   
     my $self = {};
     bless $self, $class;
-    
+    $self->{grammar} = $grammar;
     $self;
-}
-
-# lexer rules are derived from literal terminals, which can be 
-# strings or qr// patterns in single or double quotes
-sub _extract_lexer_rules
-{
-    my $self = shift;
-    
-    my $rules = shift;
-    my $terminals = $self->{terminals};
-    
-    $self->show_option('rules');
-    $self->show_option('symbols');
-    $self->show_option('terminals');
-
-    my $lr = {};
-
-    # lexer rules are formed by terminals wrapped in single or double quotes
-    my @literals;
-    for my $terminal (@$terminals){
-#        say "# terminal:\n", $terminal;
-        if (
-            (substr($terminal, 0, 1) eq '"' and substr($terminal, -1) eq '"') or
-            (substr($terminal, 0, 1) eq "'" and substr($terminal, -1) eq "'")
-            ){
-            push @literals, $terminal;
-            my $literal = substr $terminal, 1, -1;
-#            say "# lexer rule: <$literal> -> <$terminal>";
-            $lr->{$literal} = $terminal;
-        }
-    }
-    # save and show literals if show_literals is set
-    $self->set_option('literals', join "\n", sort @literals );
-    $self->show_option('literals');
-    
-    return $lr;
 }
 
 # TODO: pluggable lexer (Parse::Flex, etc.)
@@ -56,17 +22,17 @@ sub lex
     
     my $input = shift;
     
-    my $lex = shift || $self->{lexer_rules};
+    my $lex = shift || $self->{grammar}->{lexer_rules};
 
-    $self->set_option('input', $input);
-    $self->show_option('input');
+    #$self->set_option('input', $input);
+    #$self->show_option('input');
    
-    $self->show_option('rules');
-    $self->show_option('symbols');
-    $self->show_option('terminals');
-    $self->show_option('literals');
+    #$self->show_option('rules');
+    #$self->show_option('symbols');
+    #$self->show_option('terminals');
+    #$self->show_option('literals');
 
-    $self->show_option('lexer_rules');
+    #$self->show_option('lexer_rules');
     
     # TODO: add 'default' rule (as in given/when) to apply when 
     # none of the other rules matched (for BNF parsing)
@@ -91,14 +57,14 @@ sub lex
     }
     $self->{lexer_regexes} = $lex_re;
     chomp $self->{lexer_regexes};
-    $self->show_option('lexer_regexes');
+#    $self->show_option('lexer_regexes');
 
     my $tokens = [];
     my $i;
 
     my $max_iterations = 1000000;
 
-    $self->show_option('show_input');
+#    $self->show_option('show_input');
         
     while ($i++ < $max_iterations){
         # trim input start
