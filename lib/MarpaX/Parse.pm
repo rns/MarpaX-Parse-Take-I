@@ -517,7 +517,7 @@ sub _ebnf_to_rules
     # parse ebnf
     my $ebnf_tokens = MarpaX::Parse::EBNF->lex_ebnf_text($ebnf);
     
-    say "# EBNF tokens:\n", Dump $ebnf_tokens;
+#    say "# EBNF tokens:\n", Dump $ebnf_tokens;
     
     # save ebnf tokens
     $self->set_option('ebnf_tokens', join "\n", map { join ': ', @$_ } @$ebnf_tokens);
@@ -535,7 +535,19 @@ sub _ebnf_to_rules
     say $ebnf_parser->show_rules;
     my $rules = $ebnf_parser->parse($ebnf_tokens);
     
-#    say Dump $rules;
+#    say "# rules returned:", Dump $rules;
+    if (ref $rules->[0]->[0] eq "ARRAY"){
+        # sort rules by the maximum NoA number of actions
+        my %NoA_indices;
+        for my $i (0..@$rules-1){
+            my $rule_set = $rules->[$i];
+            my $NoA = grep { @$_ eq 3 } @$rule_set;
+            $NoA_indices{$NoA} = $i;
+        }
+        # among those with equal number of actions, select an arbitrary one
+        # TODO: ensure grammar amniguity
+        $rules = $rules->[ $NoA_indices{(sort { $b <=> $a } keys %NoA_indices)[0]} ];
+    }
     
     return $rules;
 }

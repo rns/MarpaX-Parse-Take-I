@@ -16,6 +16,20 @@ sub new
     return $self;
 }
 
+my $action_prolog = q{
+    # start action prolog
+    # imports
+    use 5.010; use strict; use warnings; use YAML;
+    # rule parts and signature
+    my ($rule_lhs, @rule_rhs) = $Marpa::R2::Context::grammar->rule($Marpa::R2::Context::rule);
+    my $rule_signature = $rule_lhs . ' -> ' . join ' ', @rule_rhs;
+    # more dumpers
+    use Data::Dumper;
+    $Data::Dumper::Terse = 1;          # don't output names where feasible
+    $Data::Dumper::Indent = 0;         # turn off all pretty print
+    # end action prolog
+};
+
 # expressions in parens (factor)
 my %subrules    = ();
 my $subrule_no  = 0;
@@ -24,15 +38,24 @@ my $ebnf_rules = [
     
     # grammar ::= production+
     [ grammar => [qw( production+ )], sub {
-#        say Dump \@_;
-#        say scalar @{ $_[1] };
-        return @{ $_[1] } > 1 ? [ map { @$_ } @{ $_[1] } ] : $_[1];
+        shift;
+        my $rules = [];
+        my @productions = @_;
+        for my $production (@productions){
+            for my $Marpa_rules (@$production){
+#                say "# production rules: ", Dump $Marpa_rules;
+                push @$rules, @$Marpa_rules;
+            }
+        }
+#        say "# rules to return:\n", Dump $rules;
+        $rules;
     } ],
     
     # production ::= lhs '::=' rhs
     # production    ::= lhs '::=' rhs action?
     [ production => [qw( lhs ::= rhs action )], 
         sub {
+            
             shift;
             
             my ($lhs, undef, $rhs, $prod_action) = @_;
@@ -42,20 +65,31 @@ my $ebnf_rules = [
 #            say "=-" x 32;
 #            say "# adding\n";
 
-            say "# production/lhs\n", $lhs;
-            say "# production/rhs\n", Dump $rhs;
-            say "# production/action\n", $prod_action if $prod_action;
-            say "# subrules\n", Dump \%subrules;
+#            say "# production/lhs\n", $lhs;
+#            say "# production/rhs\n", Dump $rhs;
+#            say "# production/action\n", $prod_action if $prod_action;
+#            say "# subrules\n", Dump \%subrules;
             
             # add rule
-#            say "# rule:\n$lhs\n", Dump $rhs;
-            # TODO: quantifier
             my $alt = $rhs->{alternation};
-            my $qnt = $rhs->{quantifier};
             for my $seq ( map { $_->{sequence} } @$alt ){
                 my @symbols = map { ref $_ eq "HASH" ? $_->{symbol} : "$lhs$_" } @$seq;
-                say "$lhs -> @symbols";
-                push @$rules, [ $lhs, \@symbols ];
+#                say "$lhs -> @symbols";
+                # set up rule
+                my $rule = [ $lhs, \@symbols ];
+                # add production action if any
+                if ($prod_action){
+                    # setup production action closure
+                    my $closure = eval_closure(
+                        source => 'sub{' . $action_prolog . substr($prod_action, 2, -3) . '}',
+                        description => 'action of rule ' . 
+                            $rule->[0] . ' -> ' . join ' ', @{ $rule->[1] },
+                    );
+                    # add production action closure
+                    push @$rule, $closure;
+                }
+                # add rule
+                push @$rules, $rule;
             }            
             
             # add subrules prepending the rule's $lhs
@@ -66,8 +100,21 @@ my $ebnf_rules = [
                     my @symbols = map { ref $_ eq "HASH" ? $_->{symbol} : "$lhs$_" } @$seq;
                     # remove quantifiers
                     $subrule_lhs =~ s/\?|\*|\+//;
-                    say "$lhs$subrule_lhs -> @symbols";
-                    push @$rules, [ "$lhs$subrule_lhs", \@symbols ];
+#                    say "$lhs$subrule_lhs -> @symbols";
+                    my $rule = [ "$lhs$subrule_lhs", \@symbols ];
+                    # add action if any
+                    my $subrule_action = $subrule_rhs->{action};
+                    if ($subrule_action){
+                        # setup subrule action closure
+                        my $closure = eval_closure(
+                            source => 'sub{' . $action_prolog . substr($subrule_action, 2, -3) . '}',
+                            description => 'action of rule ' . 
+                                $rule->[0] . ' -> ' . join ' ', @{ $rule->[1] },
+                        );
+                        # add subrule action closure
+                        push @$rule, $closure;
+                    }
+                    push @$rules, $rule;
                 }            
             }
             
@@ -75,6 +122,7 @@ my $ebnf_rules = [
             %subrules    = ();
             $subrule_no  = 0;
             
+#            say "# rules:\n", Dump $rules;
             $rules;
         }
     ],
@@ -121,7 +169,7 @@ my $ebnf_rules = [
     # factor ::= '(' rhs ')' quantifier? action?
     [ factor => [qw( '(' rhs ')' quantifier action )], 
         sub { 
-            say Dump \@_;
+#            say Dump \@_;
             my $subrule = $_[2];
 
             my $quantifier = $_[4] if defined $_[4] and $_[4] ~~ ['?', '*', '+'];

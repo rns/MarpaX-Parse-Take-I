@@ -2,23 +2,93 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More;
 
 use YAML;
 
 use_ok 'MarpaX::Parse';
 
+# every actionable symbol will be handled as array of arrays
+# TODO: fix comments; now they can start at column 0 only
+my $AoA_action_grammar = q{
+
+    expression  ::= 
+        term  
+        ( 
+            ( 
+                '+' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} |
+                '-' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
+            ) 
+            term 
+        )* 
+# this is last subexpression's action
+        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
+
+# this is the rule's subexpression's action
+        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+        
+    term        ::= 
+        factor  
+        ( 
+            ( 
+                '*' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} |
+                '/' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} )
+            factor
+        )* 
+        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+        
+        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+        
+    factor      ::= 
+        constant 
+            %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        variable
+            %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '('  expression  ')' 
+            %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+        
+    variable    ::= 
+        'x' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} |
+        'y' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} |
+        'z' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+        
+# digit+ cannot have a rule 
+    constant    ::= 
+        digit+
+        
+        ('.' digit+)? 
+        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+        
+        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+
+    digit       ::= 
+        '0' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '1' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '2' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '3' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '4' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '5' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '6' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '7' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '8' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} | 
+        '9' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
+    %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
+    
+};
+
 my $grammar = q{
 
-    expression  ::= term  ( ( '+' | '-' ) term )*
+    expression  ::= term  ( ( '+' | '-' ) term )* 
     term        ::= factor  ( ( '*' | '/' ) factor)*
     factor      ::= constant | variable | '('  expression  ')'
-    variable    ::= 'x' | 'y' | 'z' | 'a' | 'b'
+    variable    ::= 'x' | 'y' | 'z'
     constant    ::= digit+ ('.' digit+)?
     digit       ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
     
 };
 
+# set up no-actions grammar
 my $ebnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'AoA',
@@ -27,9 +97,10 @@ my $ebnf = MarpaX::Parse->new({
     nullables_for_quantifiers => 1,
 });
 
-say $ebnf->show_rules;
-
 isa_ok $ebnf, 'MarpaX::Parse';
+
+#say $ebnf->show_rules;
+#say $ebnf->show_closures;
 
 my $tests = [
 
@@ -62,28 +133,53 @@ my $tests = [
 
     [   '(x + y)/z + 2',          
         "[[['(',['x',[['+','y']]],')'],[['/','z']]],[['+',['2']]]]" ],
-
-    [   '((a + b)/((x + y)/z))+2',
-        "[['(',[['(',['a',[['+','b']]],')'],[['/',['(',[['(',['x',[['+','y']]],')'],[['/','z']]],')']]]],')'],[['+',['2']]]]" ],
 ];
-
-use XML::Twig;
 
 use Data::Dumper;
 $Data::Dumper::Terse = 1;          # don't output names where feasible
 $Data::Dumper::Indent = 0;         # turn off all pretty print
-
-use Data::Dump qw{ dump };
 
 for my $test (@$tests){
 
     my ($expr, $expected) = @$test;
 
     my $value = $ebnf->parse($expr);
-    
+
     unless (is Dumper($value), $expected, "expression $expr lexed and parsed with EBNF"){
 #        say $ebnf->show_parse_tree;
         say Dumper $value;
     }
 
 }
+
+#
+# set up grammar with descriving actions
+#
+$ebnf = MarpaX::Parse->new({
+    rules => $AoA_action_grammar,
+    default_action => 'AoA',
+    ebnf => 1,
+#    show_tokens => 1,
+    quantifier_rules => 'recursive',
+    nullables_for_quantifiers => 1,
+});
+
+isa_ok $ebnf, 'MarpaX::Parse';
+
+say $ebnf->show_rules;
+say $ebnf->show_closures;
+
+for my $test (@$tests){
+
+    my ($expr, $expected) = @$test;
+
+    my $value = $ebnf->parse($expr);
+
+    unless (is Dumper($value), $expected, "expression $expr lexed, parsed, and described with EBNF"){
+#        say $ebnf->show_parse_tree;
+        say Dumper $value;
+    }
+
+}
+
+done_testing;
