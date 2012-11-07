@@ -8,32 +8,6 @@ use YAML;
 
 use_ok 'MarpaX::Parse';
 
-=pod EBNF syntax 
-
-Wirth
-
-    Production  = Identifier "=" Expression ".".
-    Expression  = Term {"|" Term }.
-    Term        = Factor {Factor}.
-    Factor      = Identifier | "'" String "'" | '"' String '"' | 
-                  "(" Expression ")" | "[" Expression "]" | "{" Expression "}".
-    Identifier  = String .
-    String      = Char { Char }.
-    Char        = "A" | .. | "Z" | "a" | .. | "z" | "0" | .. | "9"
-
-?+*-notation minus 
-
-    Production  ::= Identifier "::=" Expression
-    Expression  ::= Term ("|" Term )*
-    Term        ::= Factor {Factor}
-    Factor      ::= Identifier | "'" String "'" | '"' String '"' | 
-                  "(" Expression ")" | "[" Expression "]" | "{" Expression "}"
-    Identifier  ::= String .
-    String      ::= Char { Char }.
-    Char        ::= "A" | .. | "Z" | "a" | .. | "z" | "0" | .. | "9"
-
-=cut
-
 for my $data (
 [ 
     q{ r ::= s1 s2 r1 }, <<EOT
@@ -49,8 +23,7 @@ EOT
 ],
 
 [ q{ 
-    s ::= x ( (, x) | (,? conj x) )* 
-#    s1 ::= x ( (, x) | (,? conj x) )*
+    s ::= x ( (',' x) | (','? conj x) )* 
 }, '' ],
     
     ){
@@ -59,7 +32,9 @@ EOT
     my $ebnf = MarpaX::Parse->new({
         rules => $grammar,
         ebnf => 1,
-#        show_tokens => 1,
+        show_tokens => 1,
+        quantifier_rules => 'recursive',
+        nullables_for_quantifiers => 1,
     });
     
     my $got_rules = $ebnf->show_rules;
