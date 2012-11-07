@@ -17,6 +17,7 @@ use Tree::Simple::View::HTML;
 
 use Data::TreeDumper;
 
+use MarpaX::Parse::Grammar;
 use MarpaX::Parse::BNF;
 use MarpaX::Parse::EBNF;
 
