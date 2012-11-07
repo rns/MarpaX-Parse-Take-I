@@ -10,7 +10,10 @@ use_ok 'MarpaX::Parse';
 
 # every actionable symbol will be handled as array of arrays
 # so that the same tests shall pas for both grammars
-my $AoA_action_grammar = q{
+
+# this produces array of arrays with embedded actions (applying AoA default_action 
+# to non-actionable symbols)
+my $AoA_with_embedded_actions = q{
 
     expression  ::= 
         term  
@@ -80,7 +83,8 @@ my $AoA_action_grammar = q{
     
 };
 
-my $grammar = q{
+# this produces array of arrays with default actions
+my $AoA_with_default_action = q{
 
     expression  ::= term  ( ( '+' | '-' ) term )* 
     term        ::= factor  ( ( '*' | '/' ) factor)*
@@ -93,7 +97,7 @@ my $grammar = q{
 
 # set up no-actions grammar
 my $ebnf = MarpaX::Parse->new({
-    rules => $grammar,
+    rules => $AoA_with_default_action,
     default_action => 'AoA',
     ebnf => 1,
     quantifier_rules => 'recursive',
@@ -102,8 +106,8 @@ my $ebnf = MarpaX::Parse->new({
 
 isa_ok $ebnf, 'MarpaX::Parse';
 
-say $ebnf->show_rules;
-say $ebnf->show_closures;
+#say $ebnf->show_rules;
+#say $ebnf->show_closures;
 
 my $tests = [
 
@@ -148,7 +152,7 @@ for my $test (@$tests){
 
     my $value = $ebnf->parse($expr);
 
-    unless (is Dumper($value), $expected, "expression $expr lexed and parsed with EBNF"){
+    unless (is Dumper($value), $expected, "expression $expr parsed with EBNF using AoA default action"){
 #        say $ebnf->show_parse_tree;
         say Dumper $value;
     }
@@ -159,18 +163,17 @@ for my $test (@$tests){
 # set up grammar with descriving actions
 #
 $ebnf = MarpaX::Parse->new({
-    rules => $AoA_action_grammar,
+    rules => $AoA_with_embedded_actions,
     default_action => 'AoA',
     ebnf => 1,
-#    show_tokens => 1,
     quantifier_rules => 'recursive',
     nullables_for_quantifiers => 1,
 });
 
 isa_ok $ebnf, 'MarpaX::Parse';
 
-say $ebnf->show_rules;
-say $ebnf->show_closures;
+#say $ebnf->show_rules;
+#say $ebnf->show_closures;
 
 for my $test (@$tests){
 
@@ -178,7 +181,7 @@ for my $test (@$tests){
 
     my $value = $ebnf->parse($expr);
 
-    unless (is Dumper($value), $expected, "expression $expr lexed, parsed with actions embedded in EBNF"){
+    unless (is Dumper($value), $expected, "expression $expr parsed with EBNF having AoA actions embedded"){
 #        say $ebnf->show_parse_tree;
         say Dumper $value;
     }

@@ -30,10 +30,6 @@ my $action_prolog = q{
     # end action prolog
 };
 
-# expressions in parens (factor)
-my %subrules    = ();
-my $subrule_no  = 0;
-
 my $ebnf_rules = [
     
     # grammar ::= production+
@@ -51,12 +47,15 @@ my $ebnf_rules = [
         $rules;
     } ],
     
-    # production ::= lhs '::=' rhs
     # production    ::= lhs '::=' rhs action?
     [ production => [qw( lhs ::= rhs action )], 
         sub {
             
-            shift;
+            my $per_parse = shift;
+            
+            # set up subrules
+            my $subrules    = $per_parse->{subrules};
+            my $subrule_no  = $per_parse->{subrule_no};
             
             my ($lhs, undef, $rhs, $prod_action) = @_;
             
@@ -68,7 +67,7 @@ my $ebnf_rules = [
 #            say "# production/lhs\n", $lhs;
 #            say "# production/rhs\n", Dump $rhs;
 #            say "# production/action\n", $prod_action if $prod_action;
-#            say "# subrules\n", Dump \%subrules;
+#            say "# subrules\n", Dump $subrules;
             
             # add rule
             my $alt = $rhs->{alternation};
@@ -93,8 +92,8 @@ my $ebnf_rules = [
             }            
             
             # add subrules prepending the rule's $lhs
-            for my $subrule_lhs (sort keys %subrules){
-                my $subrule_rhs = $subrules{$subrule_lhs};
+            for my $subrule_lhs (sort keys %$subrules){
+                my $subrule_rhs = $subrules->{$subrule_lhs};
 #                say "# subrule:\n$subrule_lhs\n", Dump $subrule_rhs;
                 for my $seq (map { $_->{sequence} } @{ $subrule_rhs->{alternation} }){
                     my @symbols = map { ref $_ eq "HASH" ? $_->{symbol} : "$lhs$_" } @$seq;
@@ -118,9 +117,9 @@ my $ebnf_rules = [
                 }            
             }
             
-            # reinitialize
-            %subrules    = ();
-            $subrule_no  = 0;
+            # reinitialize subrules
+            %{ $per_parse->{subrules} } = ();
+            $per_parse->{subrule_no}    = 0;
             
 #            say "# rules:\n", Dump $rules;
             $rules;
@@ -130,10 +129,7 @@ my $ebnf_rules = [
     # lhs ::= symbol
     [ lhs => [qw( symbol )] ],
 
-#   [ 'rhs' => [qw(term action)], sub { } ],
-#   [ 'rhs' => [qw(term action '|' rhs)], sub { } ],
-
-    # rhs ::= term (rhs | term)*
+    # rhs ::= term action? (rhs | term action?)*
     [ 'rhs' => [qw(term action)], sub { 
 #        say Dump \@_;
         my $term = { alternation => [ $_[1] ] };
@@ -142,12 +138,13 @@ my $ebnf_rules = [
     } ],
 
     [ 'rhs' => [qw(rhs '|' term action )], sub { 
-#        say Dump \@_;
+#        say "# :\n", Dump \@_;
         $_[3]->{action} = $_[4] if defined $_[4];
         push @{ $_[1]->{alternation} }, $_[3];
         $_[1]
     } ],
-   
+    
+    # term ::= factor | term factor
     [ term => [qw{ factor }], sub {
         { sequence => [ $_[1] ] }
     } ],
@@ -165,21 +162,34 @@ my $ebnf_rules = [
     ], 
 
     # TODO: factor ::= '(' identifier ':' rhs ')' quantifier? action?
+    # ...
     
     # factor ::= '(' rhs ')' quantifier? action?
     [ factor => [qw( '(' rhs ')' quantifier action )], 
         sub { 
-#            say Dump \@_;
-            my $subrule = $_[2];
+#            say "# factor (subrule to be set up):\n", Dump \@_;
+            my $per_parse = shift;
+            
+            # set up subrules
+            my $subrules    = $per_parse->{subrules};
+            my $subrule_no  = $per_parse->{subrule_no};
+            
+            my $subrule = $_[1];
 
-            my $quantifier = $_[4] if defined $_[4] and $_[4] ~~ ['?', '*', '+'];
+            my $quantifier = $_[3] if defined $_[3] and $_[3] ~~ ['?', '*', '+'];
             $quantifier //= '';
 
             my $action = $_[-1] if defined $_[-1] and index($_[-1], "%{", 0) == 0;
             
             # add subrule under provisional lhs with quantifier
-            my $prov_lhs = "__subrule" . $subrule_no++ . ($_[4] ? $_[4] : '');
-            $subrules{$prov_lhs} = $subrule;
+            my $prov_lhs = "__subrule" . $subrule_no++ . ($_[3] ? $_[3] : '');
+            $subrules->{$prov_lhs} = $subrule;
+            
+            # save subrule number and subrules
+            $per_parse->{subrule_no} = $subrule_no;
+            $per_parse->{subrules}   = $subrules;
+            
+#            say "# subrules:\n", $subrule_no, Dump $subrules;
             
             # return provisional lhs
             $prov_lhs;
