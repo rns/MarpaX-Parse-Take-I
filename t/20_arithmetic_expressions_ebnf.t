@@ -99,8 +99,8 @@ my $ebnf = MarpaX::Parse->new({
 
 isa_ok $ebnf, 'MarpaX::Parse';
 
-#say $ebnf->show_rules;
-#say $ebnf->show_closures;
+say $ebnf->show_rules;
+say $ebnf->show_closures;
 
 my $tests = [
 
@@ -175,7 +175,7 @@ for my $test (@$tests){
 
     my $value = $ebnf->parse($expr);
 
-    unless (is Dumper($value), $expected, "expression $expr lexed, parsed, and described with EBNF"){
+    unless (is Dumper($value), $expected, "expression $expr lexed, parsed with actions embedded in EBNF"){
 #        say $ebnf->show_parse_tree;
         say Dumper $value;
     }
