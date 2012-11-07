@@ -35,14 +35,23 @@ my $ebnf_rules = [
     # grammar ::= production+
     [ grammar => [qw( production+ )], sub {
         shift;
-        my $rules = [];
+        
         my @productions = @_;
-        for my $production (@productions){
-            for my $Marpa_rules (@$production){
-#                say "# production rules: ", Dump $Marpa_rules;
-                push @$rules, @$Marpa_rules;
+#        say "# productions:\n", Dump \@productions;
+        my $rules = [];
+        
+        if (@productions == 1 and ref $productions[0] ne "ARRAY"){
+            push $rules, @productions;
+        }
+        else{
+            for my $production (@productions){
+                for my $Marpa_rules (@$production){
+#                    say "# production rules:\n", Dump $Marpa_rules;
+                    push @$rules, ref $Marpa_rules->[0] eq "ARRAY" ? @$Marpa_rules : $Marpa_rules;
+                }
             }
         }
+        
 #        say "# rules to return:\n", Dump $rules;
         $rules;
     } ],
