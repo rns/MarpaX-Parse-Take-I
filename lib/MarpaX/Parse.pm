@@ -532,7 +532,7 @@ sub _ebnf_to_rules
     
     # parse EBNF tokens to Marpa::R2 rules
 #    say "# parsing EBNF";
-    say $ebnf_parser->show_rules;
+#    say $ebnf_parser->show_rules;
     my $rules = $ebnf_parser->parse($ebnf_tokens);
     
 #    say "# rules returned:", Dump $rules;
