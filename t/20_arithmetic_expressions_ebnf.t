@@ -19,16 +19,14 @@ my $AoA_with_embedded_actions = q{
         term  
         ( 
             ( 
-                '+' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} |
+                '+' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
+                |
                 '-' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
             ) 
             term 
         )* 
     # this is the action of the last subexpression
-        %{ # start
-            # action comment
-            shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c 
-        %} # comment
+        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c  %}
 
 # this is the action of <subexpression> rule
         %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
@@ -37,8 +35,10 @@ my $AoA_with_embedded_actions = q{
         factor  
         ( 
             ( 
-                '*' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} |
-                '/' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} )
+                '*' 
+                %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} |
+                '/' 
+                %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} )
             factor
         )* 
         %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
