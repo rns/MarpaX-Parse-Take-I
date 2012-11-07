@@ -15,6 +15,8 @@ use Math::Combinatorics;
 
 use Clone qw(clone);
 
+use MarpaX::Parse::Grammar::Options;
+
 my $MarpaX_Parse_Grammar_options = {
 
     # transform quantified symbols into sequence (by default) or recursive rules

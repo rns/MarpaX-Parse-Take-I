@@ -80,34 +80,7 @@ MarpaX::Parse::Grammar
 
     MarpaX::Parse::Grammar::BNF->can(build)
     MarpaX::Parse::Grammar::EBNF->can(build)
-
-MarpaX::Parse::Lexer 
-    # supposed to be called from MarpaX::Parse::parse()
-    # when it has scalar $input
-    
-    new (MarpaX::Parse::Grammar)
-    
-    sub _extract_lexer_rules
-    sub lex
-
-MarpaX::Parse::Tree
-    
-    # subs in this package will be used to build parse trees
-    # for MarpaX::Parse::Grammar
-    
-    sub AoA { 
-    sub HoA { 
-    sub HoH { 
-    sub AoA_with_rule_signatures { 
-    sub sexpr { 
-    sub tree { 
-    sub filter
-    sub xml {
-    
-    sub show
-    sub traverse
-    sub transform
-    
+   
 MarpaX::Parse::NLP
     
     5W+H+Vs
@@ -149,6 +122,7 @@ MarpaX::Parse::Options
     sub show_lexer_regexes         
     sub show_recognition_failures  
 
+BNF/EBNF
     sub _bnf_to_rules
     sub _ebnf_to_rules
 
@@ -229,6 +203,10 @@ sub new{
     my $self = {};
     bless $self, $class;
     
+    # set up and save the grammar
+    my $g = MarpaX::Parse::Grammar->new(clone $options);
+    $self->{g} = $g;
+    
     $self->build($options);
     
     return $self;
@@ -246,10 +224,9 @@ sub build {
     
     my $options = shift;
     
-    # set up and save the grammar
-    my $g = MarpaX::Parse::Grammar->new(clone $options);
-    $self->{g} = $g;
-    
+    # TODO: compatibility, to be deleted
+    my $g = $self->{g};
+
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
     
