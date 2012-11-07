@@ -2,7 +2,7 @@ use 5.010;
 use strict;
 use warnings;
 
-=pod
+=pod algebraic identtities (patterns)
 
 a + b = b + a
 a * b = b * a
