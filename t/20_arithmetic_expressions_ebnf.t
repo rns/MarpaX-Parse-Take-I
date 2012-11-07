@@ -9,7 +9,7 @@ use YAML;
 use_ok 'MarpaX::Parse';
 
 # every actionable symbol will be handled as array of arrays
-# TODO: fix comments; now they can start at column 0 only
+# so that the same tests shall pas for both grammars
 my $AoA_action_grammar = q{
 
     expression  ::= 
@@ -21,10 +21,13 @@ my $AoA_action_grammar = q{
             ) 
             term 
         )* 
-# this is last subexpression's action
-        %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
+    # this is the action of the last subexpression
+        %{ # start
+            # action comment
+            shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c 
+        %} # comment
 
-# this is the rule's subexpression's action
+# this is the action of <subexpression> rule
         %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %}
         
     term        ::= 
