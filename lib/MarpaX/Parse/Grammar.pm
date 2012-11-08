@@ -15,9 +15,43 @@ use Math::Combinatorics;
 
 use Clone qw(clone);
 
-use MarpaX::Parse::Grammar::Options;
+my $options = {
 
-my $MarpaX_Parse_Grammar_options = {
+    # stage: pre-lexing
+    # extracting lexer rules from the grammar rules (terminal literals)
+    show_literals => undef,
+    show_lexer_rules => undef,
+    # setting up lexer regexes based on lexer rules 
+    show_lexer_regexes => undef,
+
+    # stage: lexing input for parsing (BNF parser and input)
+    show_input => undef,
+    show_tokens => undef,
+    
+    # stage: transforming BNF or Marpa::R2 rules passed in 'rules' option 
+    # and setting up the grammar based on them
+    show_rules => undef,
+    show_closures => undef,
+    
+    # stage: parsing input with BNF or Marpa::R2 rules passed in 'rules' option
+    show_symbols => undef,
+    show_terminals => undef,
+    
+    # stage: recognition by Marpa::R2 
+    show_recognition_failures => undef,
+    recognition_failure_sub => undef,
+
+    # handle ambuous tokens with input model (alternate()/earleme_complete()
+    ambiguity => undef,
+    
+    # transform quantified symbols into sequence (by default) or recursive rules
+    quantifier_rules => undef,
+
+    # if true, nullable symbols will be added instead removing the rules 
+    # with ?/*-quanfitied symbols
+    nullables_for_quantifiers => undef,
+
+    ebnf => undef,
 
     # transform quantified symbols into sequence (by default) or recursive rules
     quantifier_rules => undef,
@@ -41,15 +75,147 @@ sub new{
     
     # extract MarpaX::Parse::Grammar options and set defaults
     while (my ($option, $value) = each %$options){
-        if (exists $MarpaX_Parse_Grammar_options->{$option}){
+        if (exists $options->{$option}){
             $self->{$option} = $value;
             delete $options->{$option};
         }
     }
     # set defaults
-    $self->{quantifier_rules}               //= 'sequence';
-
+    $self->{quantifier_rules} //= 'sequence';
+    $self->{ambiguity} //= 'input_model';
+    
+    $self->build($options);
+    
     return $self;
+}
+
+#
+# extract Marpa::R2::(Grammar|Recornizer) options 
+# parse (E)BNF if needed
+# transform rules
+# set and precomute() grammar
+#
+sub build {
+    
+    my $self = shift;
+    
+    my $options = shift;
+    
+    warn Dump $options;
+    
+    # clone options to enable adding rules to grammar
+    $self->{options} = clone $options;
+    
+    # extract MarpaX::Parse options and set defaults
+    while (my ($option, $value) = each %$options){
+        if (exists $options->{$option}){
+            $self->{$option} = $value;
+            delete $options->{$option};
+        }
+    }
+    
+    # set defaults
+    $self->{quantifier_rules}               //= 'sequence';
+    $self->{ambiguity}                      //= 'input_model';
+    $self->{recognition_failure_sub}        //= \&recognition_failure;
+    
+    # transform rules
+    my @rules = @{ $options->{rules} };
+
+    # quantifiers to rules
+    $self->_quantifiers_to_rules( \@rules );
+
+    # extract closures and generate actions for Recognizer
+    my $closures = $self->_closures_to_actions( \@rules );
+    $self->{closures} = $closures;
+
+    # handle default action
+    $self->_set_default_action($options);    
+
+    # TODO: parse() needs this; to be removed
+    $self->{default_action} = $options->{default_action};
+    
+    # set start to lhs of the first rule if not set
+    if (not exists $options->{start}){
+        $options->{start} = $self->_extract_start_symbol( \@rules );
+    }
+
+    # save transformed rules for further adding to them 
+    $self->set_option('transformed_rules', \@rules);
+    
+    # set transformed rules as Marpa grammar option
+    $options->{rules} = \@rules;
+    
+    # set up the grammar
+    my $grammar = Marpa::R2::Grammar->new($options);
+    $grammar->precompute();
+    
+    # save the grammar
+    $self->{grammar} = $grammar;
+    
+    # set rules option
+    $self->set_option('rules', $grammar->show_rules);
+    
+    # TODO: the below 2 calls need to be moved to MarpaX::Parse::Grammar 
+    # once {rules} are fully there
+
+    # extract save terminals for lexing
+    $self->{g}->{terminals} = $self->_extract_terminals( \@rules, $grammar );
+    
+    # extract and save lexer rules
+    $self->set_option('lexer_rules', $self->_extract_lexer_rules( $options->{rules} ) );
+}
+
+#
+# get current options (as-passed), get rules from them, merge new rules, 
+# and rebuild MarpaX::Parse
+# 
+sub merge_token_rules { 
+    
+    my $self = shift;
+
+    my $token_rules = shift;
+
+    # get initial options
+    my $options = $self->{options};
+    
+    # $token_rules and $options->{rules} need to be both array refs or scalars (strings)
+    if (ref $token_rules eq "ARRAY" and ref $options->{rules} eq "ARRAY"){
+        # merge arrays
+        push @{ $options->{rules} }, @$token_rules;
+        
+    }
+    elsif (ref $token_rules eq "" and ref $options->{rules} eq ""){
+        # merge texts
+        $options->{rules} .= $token_rules;
+    }
+    
+    # rebuild
+    $self->build($options);
+}
+
+# 
+# rule transform methods
+#
+
+sub _set_default_action
+{
+    my $self = shift;
+    
+    my $options = shift;
+    
+    # if default action exists in MarpaX::Parse::Tree package then use it
+    my $da = $options->{default_action};
+    if (defined $da){
+        if (exists $MarpaX::Parse::Tree::{$da}){
+            $options->{default_action} = 'MarpaX::Parse::Tree::' . $da;
+        }
+    }
+    # otherwise set _default_action which prints the rules and their contents
+    else{
+        $options->{default_action} = 'MarpaX::Parse::Tree::' . 'AoA';
+    }
+    $self->{default_action} = $options->{default_action};
 }
 
 sub _rule_signature
@@ -126,19 +292,6 @@ sub _closures_to_actions
     
     return $closures;
 }
-
-=head2
-    
-    For each symbol ending with * or + add a Marpa sequence rule 
-    with lhs being the symbol, rhs being symbols without the quantifier 
-    the min => 0 or min => 1, respectively
-    
-    For each symbol ending with ?, add a new rule without such symbol
-    and remove ? from the symbol's end. 
-    
-    Several symbols may be zero (? *)-quantified and all needed rules will be added.
-    
-=cut
 
 sub _quantifiers_to_rules
 {   
@@ -423,25 +576,139 @@ sub _extract_lexer_rules
     return $lr;
 }
 
-sub _set_default_action
-{
+
+# stringify tokens as name[ name]: value
+sub _token_string {
+
+    my $token = shift;
+    
+    my $_token_string;
+    
+    # ambigious token
+    if (ref $token->[0] eq "ARRAY"){ 
+        $_token_string = join(": ", join(' ', map { $_->[0] } @$token), $token->[0]->[1]);
+    }
+    # unambigious token
+    else{ 
+        $_token_string = join (': ', @$token);
+    }
+    
+    return $_token_string;
+}
+
+# set the value to {$option} key to be printed if "show_$option" is set in the constructor
+sub set_option{
+
     my $self = shift;
+
+    my $option = shift;
+    my $value = shift;
+
+    $self->{"$option"} = $value;
+}
+
+# return show_$option value or say show_$option's value if show_$option is set to true in the constructor
+sub get_option{
+
+    my $self = shift;
+
+    my $option = shift;
+    my $value = $self->{$option} || ''; #cluck "value of option '$option' undefined";
+
+    # stringify the option value
+    if (ref $value ~~ ["ARRAY", "HASH"]){
+        # tokens
+        if ($option eq 'tokens'){
+            $value = join "\n", map { _token_string($_) } @$value;
+        }
+        # rules
+        elsif ($option eq 'rules'){
+            my $rules = $self->grammar->show_rules; 
+            $value = $rules;
+        }
+        # symbols
+        elsif ($option eq 'symbols'){
+            my $symbols = $self->grammar->show_symbols;
+            $value = $symbols;
+        }
+        # terminals
+        elsif ($option eq 'terminals'){
+            $value = join "\n", sort @{ $self->{terminals} }
+        }
+        # lexer rules
+        elsif ($option eq 'lexer_rules'){
+            my $lr = $self->{lexer_rules};
+            $value = join "\n", map { join ': ', $_, $lr->{$_} } sort keys %$lr;
+        }
+        # recognition failures        
+        elsif ($option eq 'recognition_failures'){
+            $value = @{ $self->{$option} } ? _dump ("recognition failures", $self->{$option}) : "";
+        }
+        # anything else
+        else{
+            $value = Dump $value;
+            $value =~ s/^---\n//s;
+        }
+    } ## stringify the option value
+
+    # set empty value for undefined options
+    $value //= '';
     
-    my $options = shift;
+    # remove newlines, if any
+    chomp $value;
     
-    # if default action exists in MarpaX::Parse::Tree package then use it
-    my $da = $options->{default_action};
-    if (defined $da){
-        if (exists $MarpaX::Parse::Tree::{$da}){
-            $options->{default_action} = 'MarpaX::Parse::Tree::' . $da;
+    return $value;
+}
+
+sub comment_option {
+    my $self = shift;
+
+    # we derive the comment from the option
+    my $comment = shift; 
+
+    # make the comment more readable
+    $comment =~ s/_/ /g;
+    $comment =~ s/bnf/BNF/g;
+    
+    return "# $comment:";
+}
+
+# print the value of $option to stdout if show_$option is set to true in the constructor
+sub show_option{
+    my $self = shift;
+
+    my $option = shift;
+
+    if (exists $self->{"show_$option"}){
+        my $value = $self->get_option($option);
+        if ($value){
+            my $comment = $self->comment_option($option);
+            say join "\n", $comment, $value;
         }
     }
-    # otherwise set _default_action which prints the rules and their contents
-    else{
-        $options->{default_action} = 'MarpaX::Parse::Tree::' . 'AoA';
-    }
-    $self->{default_action} = $options->{default_action};
 }
+
+# options getters
+
+sub show_parsed_bnf_rules       { $_[0]->get_option('parsed_bnf_rules') }
+sub show_transformed_bnf_rules  { $_[0]->get_option('transformed_bnf_rules') }
+sub show_closures               { $_[0]->get_option('closures') }
+
+sub show_bnf_tokens             { $_[0]->get_option('bnf_tokens') }
+sub show_bnf_rules              { $_[0]->get_option('bnf_rules') }
+sub show_bnf_closures           { $_[0]->get_option('bnf_closures') }
+
+sub show_tokens                 { $_[0]->get_option('tokens') }
+sub show_rules                  { $_[0]->get_option('rules') }
+sub show_symbols                { $_[0]->get_option('symbols') }
+sub show_terminals              { $_[0]->get_option('terminals') }
+
+sub show_lexer_rules            { $_[0]->get_option('lexer_rules') }
+sub show_literals               { $_[0]->get_option('literals') }
+
+sub show_lexer_regexes          { $_[0]->get_option('lexer_regexes') }
+
+sub show_recognition_failures   { $_[0]->get_option('recognition_failures') }
 
 1;
 

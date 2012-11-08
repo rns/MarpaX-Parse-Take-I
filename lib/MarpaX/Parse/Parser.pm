@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use MarpaX::Parse::Lexer;
+use MarpaX::Parse::Tree;
 
 sub new{
 
@@ -13,8 +14,10 @@ sub new{
   
     my $self = {};
     bless $self, $class;
-    $self->{grammar} = $grammar;
-
+    $self->{g} = $grammar;
+    
+    warn Dump $grammar;
+    
     # TODO: compatibility
     $self->{tree_package} = MarpaX::Parse::Tree->new;
 
@@ -59,24 +62,22 @@ sub parse{
     # TODO: get %$features, split $input, set up $tokens
     
     # init recognition failures
-    #
-    $self->{grammar}->set_option('recognition_failures', []);
+    $self->{recognition_failures} = [];
     
-    $self->{grammar}->show_option('bnf_tokens');
-    $self->{grammar}->show_option('bnf_rules');
-
     # input can be name/value pair arrayref or a string
     # name/value pair arrayrefs are used as is
     my $tokens;
     if (ref $input eq "ARRAY"){
         $tokens = $input;
         # show options if set
-        $self->{grammar}->show_option('rules');
-        $self->{grammar}->show_option('symbols');
-        $self->{grammar}->show_option('terminals');
-        $self->{grammar}->show_option('literals');
+
+#        $self->{g}->show_option('rules');
+#        $self->{g}->show_option('symbols');
+#        $self->{g}->show_option('terminals');
+#        $self->{g}->show_option('literals');
+
         # find ambiguous tokens and disambiguate them by adding rules to the grammar
-        if ($self->{grammar}->{ambiguity} eq 'tokens'){
+        if ($self->{g}->{ambiguity} eq 'tokens'){
 #            say "adding rules for ambiguous_tokens";
             # rules for the ambiguous token must be unique
             my $ambiguous_token_rules = {};
@@ -122,23 +123,22 @@ sub parse{
                 # add $bnf to $self->{options}->{$rules} and rebuild the grammar
                 $self->merge_token_rules($bnf);
             }
-        } ## ($self->{grammar}->{ambiguity} eq 'tokens'
+        } ## ($self->{g}->{ambiguity} eq 'tokens'
     } ## if (ref $input eq "ARRAY"){
     # strings are split
     else{
-        my $l = MarpaX::Parse::Lexer->new($self->{grammar});
+        my $l = MarpaX::Parse::Lexer->new($self->{g});
         $tokens = $l->lex($input);
     }
 
-    $self->{grammar}->set_option('tokens', $tokens);
-    $self->{grammar}->show_option('tokens');
+    $self->{g}->set_option('tokens', $tokens);
+    $self->{g}->show_option('tokens');
     
     # get grammar and closures
-    my $grammar  = $self->{grammar}->{grammar};
+    my $grammar  = $self->{g}->{grammar};
+    my $closures = $self->{g}->{closures};
     
-    my $closures = $self->{grammar}->{closures};
-    
-    $self->{grammar}->show_option('closures');
+#    $self->{g}->show_option('closures');
 
 #    say $self->get_option('tokens');
 #    say $self->get_option('rules');
@@ -170,9 +170,9 @@ sub parse{
         }
 #        say "# progress:", $recognizer->show_progress;
     }
-
-#    $self->{grammar}->show_option('recognition_failures');
-#    $self->{grammar}->show_recognition_failures if $self->{recognition_failures};
+    
+    # this needs to be $self->{o}->show
+#    $self->{g}->show_option('recognition_failures');
     
     # get values    
     my @values;
@@ -181,7 +181,7 @@ sub parse{
         my $value = $value_ref ? ${$value_ref} : 'No parse';
         # use dumper based on default_action
         my $value_dump = ref $value ? 
-            $self->{grammar}->{default_action} eq 'MarpaX::Parse::Tree::tree' ?
+            $self->{g}->{default_action} eq 'MarpaX::Parse::Tree::tree' ?
                 $self->{tree_package}->show_parse_tree($value, 'text') 
                 :
                 Dump $value
@@ -191,7 +191,7 @@ sub parse{
         next if exists $values{$value_dump};
         # save unique parses for return
         # prepend xml prolog and encode to utf8 if we need to return an XML string
-        if ($self->{grammar}->{default_action} eq 'MarpaX::Parse::Tree::xml'){
+        if ($self->{g}->{default_action} eq 'MarpaX::Parse::Tree::xml'){
             $value = '<?xml version="1.0"?>' . "\n" . $value;
             # enforce strict encoding (UTF-8 rather than utf8)
             $value = encode("UTF-8", $value);
