@@ -1,17 +1,12 @@
 package MarpaX::Parse::Lexer;
 
+use 5.010;
+use strict;
+use warnings;
+
 use MarpaX::Parse::Grammar;
 
-sub new{
-
-    my $class = shift;
-    my $grammar = shift;
-  
-    my $self = {};
-    bless $self, $class;
-    $self->{grammar} = $grammar;
-    $self;
-}
+use YAML;
 
 # TODO: token positions in input to facilitate error reporting
 =pod
@@ -20,16 +15,66 @@ sub new{
     ]
 =cut
 # TODO: pluggable lexer (Parse::Flex, etc.)
+
+sub new{
+
+    my $class = shift;
+    my $grammar = shift;
+
+    my $self = {};
+    $self->{g} = $grammar;
+
+    bless $self, $class;
+    
+}
+
+# lexer rules are derived from literal terminals, which can be 
+# strings or qr// patterns in single or double quotes
+sub _extract_lexer_rules
+{
+    my $self = shift;
+    
+    # TODO: _extract_terminals needs to be called rather than using terminals
+    my $terminals = $self->{g}->_extract_terminals;
+    
+#    say "# _extract_lexer_rules", Dump $terminals;
+#    $self->show_option('rules');
+#    $self->show_option('symbols');
+#    $self->show_option('terminals');
+
+    my $lr = {};
+
+    # lexer rules are formed by terminals wrapped in single or double quotes
+    my @literals;
+    for my $terminal (@$terminals){
+#        say "# terminal:\n", $terminal;
+        if (
+            (substr($terminal, 0, 1) eq '"' and substr($terminal, -1) eq '"') or
+            (substr($terminal, 0, 1) eq "'" and substr($terminal, -1) eq "'")
+            ){
+            push @literals, $terminal;
+            my $literal = substr $terminal, 1, -1;
+#            say "# lexer rule: <$literal> -> <$terminal>";
+            $lr->{$literal} = $terminal;
+        }
+    }
+    # save and show literals if show_literals is set
+#    $self->set_option('literals', join "\n", sort @literals );
+#    $self->show_option('literals');
+    $self->{lexer_rules} = $lr;
+    return $lr;
+}
+
 sub lex
 {
     my $self = shift;
     
-#    say "# lexing: ", Dump \@_;
-    
     my $input = shift;
-    
-    # TODO: this needs to be a call to $self->{grammar}->_extract_lexer_rules
-    my $lex = shift || $self->{grammar}->{lexer_rules};
+
+    # TODO: this needs to be $self->{g}->_extract_lexer_rules;
+    my $lex = shift || $self->_extract_lexer_rules;
+
+#    say "# lexer rules: ", Dump $lex;
 
     #$self->set_option('input', $input);
     #$self->show_option('input');
@@ -40,6 +85,7 @@ sub lex
     #$self->show_option('literals');
 
     #$self->show_option('lexer_rules');
+    warn Dump $lex;
     
     # TODO: add 'default' rule (as in given/when) to apply when 
     # none of the other rules matched (for BNF parsing)
@@ -117,8 +163,6 @@ sub lex
     }
     warn "This must have been an infinite loop: maximum interations count $max_iterations exceeded" if $i > $max_iterations;
     push @$tokens, [ '::any', $input ] if $input;
-    
-    $self->{tokens} = $tokens;
     
     return $tokens;
 }

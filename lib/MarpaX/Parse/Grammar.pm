@@ -66,26 +66,20 @@ sub new{
 
     my $class = shift;
     my $options = shift;
-  
+    
     my $self = {};
-    bless $self, $class;
-
+    
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
-    
-    # extract MarpaX::Parse::Grammar options and set defaults
-    while (my ($option, $value) = each %$options){
-        if (exists $options->{$option}){
-            $self->{$option} = $value;
-            delete $options->{$option};
-        }
-    }
+
     # set defaults
     $self->{quantifier_rules} //= 'sequence';
     $self->{ambiguity} //= 'input_model';
+
+    bless $self, $class;
     
     $self->build($options);
-    
+
     return $self;
 }
 
@@ -100,19 +94,6 @@ sub build {
     my $self = shift;
     
     my $options = shift;
-    
-    warn Dump $options;
-    
-    # clone options to enable adding rules to grammar
-    $self->{options} = clone $options;
-    
-    # extract MarpaX::Parse options and set defaults
-    while (my ($option, $value) = each %$options){
-        if (exists $options->{$option}){
-            $self->{$option} = $value;
-            delete $options->{$option};
-        }
-    }
     
     # set defaults
     $self->{quantifier_rules}               //= 'sequence';
@@ -155,16 +136,9 @@ sub build {
     
     # set rules option
     $self->set_option('rules', $grammar->show_rules);
-    
-    # TODO: the below 2 calls need to be moved to MarpaX::Parse::Grammar 
-    # once {rules} are fully there
-
-    # extract save terminals for lexing
-    $self->{g}->{terminals} = $self->_extract_terminals( \@rules, $grammar );
-    
-    # extract and save lexer rules
-    $self->set_option('lexer_rules', $self->_extract_lexer_rules( $options->{rules} ) );
 }
+
+sub grammar { $_[0]->{grammar} }
 
 #
 # get current options (as-passed), get rules from them, merge new rules, 
@@ -492,18 +466,18 @@ sub _extract_terminals
 {
     my $self = shift;
     
-    my $rules = shift;
-    my $grammar = shift;
-    
-    my $symbols = $self->_extract_symbols($rules);
+    my $symbols = $self->_extract_symbols;
+
+#    say "# _extract_terminals: symbols:", Dump $symbols;
     
     my $terminals = [];
     for my $symbol (keys %$symbols){
-        if ($grammar->check_terminal($symbol)){
+        if ($self->{grammar}->check_terminal($symbol)){
             push @$terminals, $symbol;
         }
     }
-    $self->{terminals} = $terminals;
+    
+#    say "# _extract_terminals: terminals:", Dump $terminals;
     
     return $terminals;
 }
@@ -512,7 +486,7 @@ sub _extract_symbols
 {
     my $self = shift;
     
-    my $rules = shift;
+    my $rules = $self->{options}->{rules};
     
     my $symbols = {};
     
@@ -533,49 +507,8 @@ sub _extract_symbols
             $symbols->{$symbol} = undef;
         }
     }
-    $self->{symbols} = $symbols;
-    
     return $symbols;
 }
-
-# lexer rules are derived from literal terminals, which can be 
-# strings or qr// patterns in single or double quotes
-sub _extract_lexer_rules
-{
-    my $self = shift;
-    
-    my $rules = shift;
-
-    # TODO: _extract_terminals needs to be called rather than using terminals
-    my $terminals = $self->{terminals};
-    
-#    $self->show_option('rules');
-#    $self->show_option('symbols');
-#    $self->show_option('terminals');
-
-    my $lr = {};
-
-    # lexer rules are formed by terminals wrapped in single or double quotes
-    my @literals;
-    for my $terminal (@$terminals){
-#        say "# terminal:\n", $terminal;
-        if (
-            (substr($terminal, 0, 1) eq '"' and substr($terminal, -1) eq '"') or
-            (substr($terminal, 0, 1) eq "'" and substr($terminal, -1) eq "'")
-            ){
-            push @literals, $terminal;
-            my $literal = substr $terminal, 1, -1;
-#            say "# lexer rule: <$literal> -> <$terminal>";
-            $lr->{$literal} = $terminal;
-        }
-    }
-    # save and show literals if show_literals is set
-#    $self->set_option('literals', join "\n", sort @literals );
-#    $self->show_option('literals');
-    $self->{lexer_rules} = $lr;
-    return $lr;
-}
-
 
 # stringify tokens as name[ name]: value
 sub _token_string {

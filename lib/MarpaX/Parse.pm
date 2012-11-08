@@ -1,8 +1,9 @@
-package MarpaX::Parse;
-
 use 5.010;
 use strict;
 use warnings;
+
+package MarpaX::Parse;
+
 
 use Carp qw{cluck};
 
@@ -17,108 +18,6 @@ use MarpaX::Parse::Grammar::EBNF;
 use Encode qw{ encode is_utf8 };
 
 use XML::Twig;
-
-use Clone qw(clone);
-
-=pod distro module layout
-
-# 
-MarpaX::Parse
-    
-    grammar
-    
-    sub new{
-        ref $rules eq 
-            "ARRAY" # Marpa::R2::Grammar
-            "HASH"
-            "" = textual grammar: 
-            first try to parse it with BNF; if this fails, then with EBNF 
-            to have $rules which will be fed to MarpaX::Parse::Grammar       
-
-    sub grammar {
-
-    sub recognition_failure {
-    sub parse{
-    sub show_parse_forest{
-    sub show_parse_tree{
-
-MarpaX::Parse::Grammar
-    
-    grammar = Marpa::R2::Grammar
-    
-    sub _build {
-    
-    sub _extract_start_symbol
-    sub _set_default_action
-    sub _closures_to_actions
-    sub _quantifiers_to_rules   # if there are quantifiers, e.g. symbol+
-    sub _rule_signature
-    sub _action_name
-
-    sub _extract_terminals
-    sub _extract_symbols
-
-    sub merge_token_rules {     # add rules to the grammar and re-build()
-
-
-    MarpaX::Parse::Grammar::BNF->can(build)
-    MarpaX::Parse::Grammar::EBNF->can(build)
-   
-MarpaX::Parse::NLP
-    
-    5W+H+Vs
-    
-    lex input as for NM
-    tokenize ($input, $features_provider)
-        augment grammar
-    parse
-    
-    MarpaX::Parse::NLP::Grammar
-        MarpaX::Parse::RU::Grammar
-        MarpaX::Parse::EN::Grammar
-#
-MarpaX::Parse::Util -- Debug::Msg
-    
-    sub _dump {
-
-MarpaX::Parse::Options
-    
-    new (MarpaX::Parse)
-    
-    sub _token_string {
-    sub set_option{
-    sub get_option{
-    sub comment_option {
-    sub show_option{
-    sub show_parsed_bnf_rules      
-    sub show_transformed_bnf_rules 
-    sub show_closures              
-    sub show_bnf_tokens            
-    sub show_bnf_rules             
-    sub show_bnf_closures          
-    sub show_tokens                
-    sub show_rules                 
-    sub show_symbols               
-    sub show_terminals             
-    sub show_lexer_rules           
-    sub show_literals              
-    sub show_lexer_regexes         
-    sub show_recognition_failures  
-
-BNF/EBNF
-    sub _bnf_to_rules
-    sub _ebnf_to_rules
-
-MarpaX::Parse::Parser # MarpaX::Parse -> MarpaX::Dakini MarpaX::Marp->marp
-    sub parse
-    sub merge_token_rules
-    sub recognition_failure
-
-=cut
-
-=head1 DESCRIPTION
-
-=cut
 
 #
 # Any BNF grammar passed to MarpaX::Parse by setting <rules> to scalar 
@@ -139,7 +38,6 @@ sub new{
     my $options = shift;
     
     my $self = {};
-    bless $self, $class;
     
     # TODO: extract recognizer options and pass them to parser
     my @recognizer_options = qw{
@@ -160,14 +58,13 @@ sub new{
     # array ref means we have rules
     if (ref $options->{rules} eq "ARRAY"){  
         # set up and save the grammar
-        my $grammar = MarpaX::Parse::Grammar->new(clone $options);
+        $grammar = MarpaX::Parse::Grammar->new($options);
     }
     # scalar means we have a BNF or EBNF grammar we need to parse to get rules
     elsif (ref $options->{rules} eq ""){
-        say "rules is scalar";        
         # try bnf first
         eval {
-            $grammar = MarpaX::Parse::Grammar::BNF->new($options->{rules});
+            $grammar = MarpaX::Parse::Grammar::BNF->new($options);
         } or die "can't parse: $@";
         # now try EBNF
         if ($@){
@@ -182,9 +79,6 @@ sub new{
                 $@ = $bnf_parsing_errors . $ebnf_parsing_errors;
                 return;
             }
-            else {
-                # return parsed EBNF rules
-            }
         }
     }
     # everything else
@@ -193,19 +87,19 @@ sub new{
     }
     
     # save grammar
-    $self->{grammar} = $grammar;
-    
-    # set up parser
-    my $p = MarpaX::Parse::Parser->new( $grammar );
+    $self->{g} = $grammar;
 
-    return $self;
+    # set up parser
+    $self->{p} = MarpaX::Parse::Parser->new( $grammar );
+    
+    bless $self, $class;
 }
 
 # =========
 # accessors
 # =========
 
-sub grammar { $_[0]->{grammar} }
+sub grammar { $_[0]->{g}->grammar }
 
 sub parse {
 

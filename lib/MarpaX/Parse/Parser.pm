@@ -4,6 +4,8 @@ use 5.010;
 use strict;
 use warnings;
 
+use YAML;
+
 use MarpaX::Parse::Lexer;
 use MarpaX::Parse::Tree;
 
@@ -15,8 +17,6 @@ sub new{
     my $self = {};
     bless $self, $class;
     $self->{g} = $grammar;
-    
-    warn Dump $grammar;
     
     # TODO: compatibility
     $self->{tree_package} = MarpaX::Parse::Tree->new;
@@ -154,7 +154,7 @@ sub parse{
     # read tokens
     for my $i (0..@$tokens-1){
         my $token = $tokens->[$i];
-# _dump "read()ing", $token;
+#say Dump "read()ing", $token;
         if (ref $token->[0] eq "ARRAY"){ # ambiguous token
             # use alternate/end_input
             for my $alternative (@$token) {

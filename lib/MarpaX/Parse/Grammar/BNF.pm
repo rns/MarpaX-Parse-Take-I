@@ -8,7 +8,7 @@ use YAML;
 
 use Eval::Closure;
 
-use parent 'MarpaX::Parse::Grammar';
+our @ISA = qw(MarpaX::Parse::Grammar);
 
 use MarpaX::Parse::Parser;
 use MarpaX::Parse::Lexer::BNF;
@@ -130,38 +130,35 @@ sub new
 {
     my $class = shift;
     
-    my $bnf_text = shift;
+    my $options = shift;
     
-    bless my ($self), $class;
+    my $bnf_text = $options->{rules};
     
-    $self->SUPER::new({ 
+    my $self = $class->SUPER::new({ 
         rules => $bnf_rules,
         default_action => 'AoA',
     });
     
-
     # parse bnf
     my $bnf_tokens = MarpaX::Parse::Lexer::BNF->lex($bnf_text);
 
     # save bnf tokens
     # TODO: this needs to $self->{o}->set('bnf_tokens' ...
-    $self->set_option('bnf_tokens', join "\n", map { join ': ', @$_ } @$bnf_tokens);
+#    $self->set_option('bnf_tokens', join "\n", map { join ': ', @$_ } @$bnf_tokens);
 
     # show BNF tokens if the option is set
     # TODO: this needs to $self->{o}->show('bnf_tokens' ...
     # say "# BNF tokens:\n", $self->show_bnf_tokens if $self->{show_bnf_tokens};
-    $self->show_option('bnf_tokens');
+#    $self->show_option('bnf_tokens');
     
     # TODO: show bnf parser tokens, rules, and closures if the relevant options are set
     
     # parse BNF tokens to Marpa::R2 rules
-    my $bnf_parser = MarpaX::Parse::Parser->new($self);
-    my $rules = $bnf_parser->parse($bnf_tokens);
+    $options->{rules} = MarpaX::Parse::Parser->new($self)->parse($bnf_tokens);
     
-    # save rules
-    $self->{rules} = $rules;
-
-    return $self;
+    $self->build($options);
+    
+    bless $self, $class;
 }
 
 # parse BNF to what will become Marpa::R2 rules after transformation 
