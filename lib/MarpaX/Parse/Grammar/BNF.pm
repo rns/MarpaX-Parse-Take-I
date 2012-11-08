@@ -7,6 +7,7 @@ use warnings;
 use YAML;
 
 use Eval::Closure;
+use Clone qw{clone};
 
 our @ISA = qw(MarpaX::Parse::Grammar);
 
@@ -135,7 +136,7 @@ sub new
     my $bnf_text = $options->{rules};
     
     my $self = $class->SUPER::new({ 
-        rules => $bnf_rules,
+        rules => clone($bnf_rules),
         default_action => 'AoA',
     });
     

@@ -107,9 +107,6 @@ my $ebnf = MarpaX::Parse->new({
 
 isa_ok $ebnf, 'MarpaX::Parse';
 
-#say $ebnf->grammar->show_rules;
-#say $ebnf->show_closures;
-
 my $tests = [
 
 # numbers
@@ -171,9 +168,6 @@ $ebnf = MarpaX::Parse->new({
 }) or die "Can't create grammar: $@";
 
 isa_ok $ebnf, 'MarpaX::Parse';
-
-#say $ebnf->show_rules;
-#say $ebnf->show_closures;
 
 for my $test (@$tests){
 

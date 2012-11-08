@@ -12,6 +12,8 @@ use MarpaX::Parse::Grammar;
 use MarpaX::Parse::Grammar::BNF;
 use MarpaX::Parse::Grammar::EBNF;
 
+use Clone qw{clone};
+
 #
 # Any BNF grammar passed to MarpaX::Parse by setting <rules> to scalar 
 # is parsed by the BNF parser with rules set in MarpaX::Parse::BNF
@@ -56,20 +58,15 @@ sub new{
     # scalar means we have a BNF or EBNF grammar we need to parse to get rules
     elsif (ref $options->{rules} eq ""){
         # try bnf first
-        # backup rules
-        my $rules = $options->{rules};
         eval {
-            $grammar = MarpaX::Parse::Grammar::BNF->new($options);
+            $grammar = MarpaX::Parse::Grammar::BNF->new(clone $options);
         };
         # now try EBNF
         if ($@){
             my $bnf_parsing_errors = $@;
             # TODO: catch EBNF parsing errors, e.g. := not ::=
-
-            # restore rules after Marpa::R2 creation attempt
-            $options->{rules} = $rules;
             eval {
-                $grammar = MarpaX::Parse::Grammar::EBNF->new($options);
+                $grammar = MarpaX::Parse::Grammar::EBNF->new(clone $options);
             };
             if ($@){
                 # TODO: return parsing errors somehow 
@@ -92,6 +89,13 @@ sub new{
     $self->{p} = MarpaX::Parse::Parser->new( $grammar );
     
     bless $self, $class;
+}
+
+# TODO: compatibility-only, remove
+sub show_rules{
+    my $r = $_[0]->{g}->show_rules;
+    chomp $r;
+    $r;
 }
 
 # =========

@@ -7,6 +7,7 @@ use warnings;
 use YAML;
 
 use Eval::Closure;
+use Clone qw {clone};
 
 our @ISA = qw(MarpaX::Parse::Grammar);
 
@@ -221,7 +222,7 @@ sub new
     my $ebnf_text = $options->{rules};
     
     my $self = $class->SUPER::new({ 
-        rules => $ebnf_rules,
+        rules => clone($ebnf_rules),
         default_action => 'AoA',
         quantifier_rules => 'recursive',
         nullables_for_quantifiers => 1,

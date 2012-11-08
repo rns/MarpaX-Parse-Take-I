@@ -236,7 +236,7 @@ sub _closures_to_actions
     
     my $rules = shift;
     
-#    say "# _closures_to_actions: rules:\n", Dump $rules;
+#    say "# _closures_to_actions: rules:\n", $self, Dump $rules;
     
     my $closures = {};
     
@@ -586,18 +586,19 @@ sub show_option{
     }
 }
 
+sub show_rules                  { $_[0]->grammar->show_rules }
+sub show_closures               { $_[0]->{'closures'} }
+
 # options getters
 
 sub show_parsed_bnf_rules       { $_[0]->get_option('parsed_bnf_rules') }
 sub show_transformed_bnf_rules  { $_[0]->get_option('transformed_bnf_rules') }
-sub show_closures               { $_[0]->get_option('closures') }
 
 sub show_bnf_tokens             { $_[0]->get_option('bnf_tokens') }
 sub show_bnf_rules              { $_[0]->get_option('bnf_rules') }
 sub show_bnf_closures           { $_[0]->get_option('bnf_closures') }
 
 sub show_tokens                 { $_[0]->get_option('tokens') }
-sub show_rules                  { $_[0]->get_option('rules') }
 sub show_symbols                { $_[0]->get_option('symbols') }
 sub show_terminals              { $_[0]->get_option('terminals') }
 
