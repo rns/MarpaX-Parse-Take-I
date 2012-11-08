@@ -13,6 +13,12 @@ sub new{
     $self;
 }
 
+# TODO: token positions in input to facilitate error reporting
+=pod
+    [
+        [ $name, $value, $position ]
+    ]
+=cut
 # TODO: pluggable lexer (Parse::Flex, etc.)
 sub lex
 {

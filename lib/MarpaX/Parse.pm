@@ -113,6 +113,11 @@ BNF/EBNF
     sub _bnf_to_rules
     sub _ebnf_to_rules
 
+MarpaX::Parse::Parser # MarpaX::Parse -> MarpaX::Dakini MarpaX::Marp->marp
+    sub parse
+    sub merge_token_rules
+    sub recognition_failure
+
 =cut
 
 =head1 DESCRIPTION

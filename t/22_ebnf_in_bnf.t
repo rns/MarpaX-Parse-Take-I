@@ -2,6 +2,10 @@ use 5.010;
 use strict;
 use warnings;
 
+#
+# this is left as an example that parsing EBNF in BNF is hard
+#
+
 use Test::More tests => 6;
 
 use YAML;

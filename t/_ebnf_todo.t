@@ -1,3 +1,5 @@
+=pod todo test I have no time to markup as such
+
 # capturing subrules
 greeting ::= (hello: 'Hi' | 'Hello' | 'hi' | 'hello' ) (comma: ',')? (name: world | me)? 
 %{
@@ -29,3 +31,5 @@ greeting ::= (hello: 'Hi' | 'Hello' | 'hi' | 'hello' ) (comma: ',')? (name: worl
         world ::= 'world'
         me    ::= 'parser'
         comma ::= ','
+
+=cut
