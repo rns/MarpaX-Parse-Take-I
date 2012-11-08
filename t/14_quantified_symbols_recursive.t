@@ -78,6 +78,7 @@ my $me = MarpaX::Parse->new({
     rules => $rules,
     default_action => 'AoA',
     quantifier_rules => 'recursive',
+    nullables_for_quantifiers => 0,
 });
 
 for my $input (@$inputs){

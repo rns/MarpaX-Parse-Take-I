@@ -1,5 +1,11 @@
 package MarpaX::Parse::Lexer::BNF;
 
+use 5.010;
+use strict;
+use warnings;
+
+use YAML;
+
 sub new{
     my $class = shift;
     my $self = {};
@@ -12,14 +18,32 @@ my $balanced_terminals = {
     '".+?"' => 'literal',
     "'.+?'" => 'literal',
 };
-my $balanced_terminals_re = join '|', keys %$balanced_terminals;
+
+# add passed pairs replacing keys as needed
+sub set_balanced_terminals{
+    my $self = shift;
+    my $value = shift;
+    %$balanced_terminals = ();
+    while (my ($k, $v) = each %$value){
+        $balanced_terminals->{$k} = $v;
+    }
+#    say Dump $balanced_terminals;
+}
 
 my $literal_terminals = {
     '::=' => '::=',
     '|' => '|',
 };
-my $literal_terminals_re = join '|', map { quotemeta } keys %$literal_terminals;
-# and the rest must be symbols
+
+sub set_literal_terminals{
+    my $self = shift;
+    my $value = shift;
+    %$literal_terminals = ();
+    while (my ($k, $v) = each %$value){
+        $literal_terminals->{$k} = $v;
+    }
+#    say Dump $literal_terminals;
+}
 
 sub lex
 {
@@ -27,6 +51,12 @@ sub lex
     
     my $bnf_text = shift;
     
+    # set up regexes; the rest must be symbols
+    my $balanced_terminals_re = join '|', keys %$balanced_terminals;
+    my $literal_terminals_re = join '|', map { quotemeta } keys %$literal_terminals;
+    
+#    say $balanced_terminals_re;
+#    say $literal_terminals_re;
     my $tokens = [];
     
 #    say $bnf_text;

@@ -69,10 +69,9 @@ EOT
     
     my $ebnf = MarpaX::Parse->new({
         rules => $grammar,
-        ebnf => 1,
         quantifier_rules => 'recursive',
         nullables_for_quantifiers => 1,
-    });
+    }) or die "Can't creat grammar: $@";
     
 #    say $ebnf->show_rules;
     

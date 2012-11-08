@@ -69,10 +69,6 @@ sub new{
     
     my $self = {};
     
-    # set defaults
-    $self->{quantifier_rules} //= 'sequence';
-    $self->{ambiguity} //= 'input_model';
-
     bless $self, $class;
     
     $self->build($options);
@@ -95,11 +91,27 @@ sub build {
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
 
-    
     # set defaults
-    $self->{quantifier_rules}               //= 'sequence';
-    $self->{ambiguity}                      //= 'input_model';
-    $self->{recognition_failure_sub}        //= \&recognition_failure;
+    $self->{quantifier_rules}           //= 'sequence';
+    $self->{ambiguity}                  //= 'input_model';
+    $self->{quantifier_rules}           //= 'sequence';
+    $self->{recognition_failure_sub}    //= \&recognition_failure;
+    $self->{nullables_for_quantifiers}  //= 1;
+    
+    
+    # extract this module options 
+    for my $o (qw{
+            quantifier_rules
+            ambiguity
+            quantifier_rules
+            recognition_failure_sub
+            nullables_for_quantifiers
+        }){
+        if (exists $options->{$o}){
+            $self->{$o} = $options->{$o};
+            delete $options->{$o};
+        }
+    }
     
     # transform rules
     my @rules = @{ $options->{rules} };
@@ -461,54 +473,6 @@ sub _quantifiers_to_rules
         push @$rules, @rules_with_nullables;
     }
     
-}
-
-sub _extract_terminals
-{
-    my $self = shift;
-    
-    my $symbols = $self->_extract_symbols;
-
-#    say "# _extract_terminals: symbols:", Dump $symbols;
-    
-    my $terminals = [];
-    for my $symbol (keys %$symbols){
-        if ($self->{grammar}->check_terminal($symbol)){
-            push @$terminals, $symbol;
-        }
-    }
-    
-#    say "# _extract_terminals: terminals:", Dump $terminals;
-    
-    return $terminals;
-}
-
-sub _extract_symbols
-{
-    my $self = shift;
-    
-    my $rules = $self->{options}->{rules};
-    
-    my $symbols = {};
-    
-    for my $rule (@$rules){
-        my ($lhs, $rhs);
-        given (ref $rule){
-            when ("HASH"){
-                # get the rule's parts
-                $lhs = $rule->{lhs};
-                $rhs = $rule->{rhs};
-            }
-            when ("ARRAY"){
-                # get the rule's parts
-                ($lhs, $rhs) = @$rule;
-            }
-        }
-        for my $symbol ($lhs, @$rhs){
-            $symbols->{$symbol} = undef;
-        }
-    }
-    return $symbols;
 }
 
 # stringify tokens as name[ name]: value

@@ -101,14 +101,13 @@ my $AoA_with_default_action = q{
 my $ebnf = MarpaX::Parse->new({
     rules => $AoA_with_default_action,
     default_action => 'AoA',
-    ebnf => 1,
     quantifier_rules => 'recursive',
     nullables_for_quantifiers => 1,
-});
+}) or die "Can't create grammar: $@";
 
 isa_ok $ebnf, 'MarpaX::Parse';
 
-#say $ebnf->show_rules;
+#say $ebnf->grammar->show_rules;
 #say $ebnf->show_closures;
 
 my $tests = [
@@ -167,10 +166,9 @@ for my $test (@$tests){
 $ebnf = MarpaX::Parse->new({
     rules => $AoA_with_embedded_actions,
     default_action => 'AoA',
-    ebnf => 1,
     quantifier_rules => 'recursive',
     nullables_for_quantifiers => 1,
-});
+}) or die "Can't create grammar: $@";
 
 isa_ok $ebnf, 'MarpaX::Parse';
 

@@ -387,6 +387,7 @@ my $rules = [
 my $me = MarpaX::Parse->new({ 
     rules => $rules,
     default_action => 'AoA',
+    nullables_for_quantifiers => 0,
 });
 
 say $me->grammar->show_rules();

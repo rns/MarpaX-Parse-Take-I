@@ -6,6 +6,8 @@ use warnings;
 
 use YAML;
 
+use Encode qw{ encode };
+
 use MarpaX::Parse::Lexer;
 use MarpaX::Parse::Tree;
 
@@ -63,6 +65,7 @@ sub parse{
     
     # init recognition failures
     $self->{recognition_failures} = [];
+    $self->{recognition_failure_sub} = \&recognition_failure;
     
     # input can be name/value pair arrayref or a string
     # name/value pair arrayrefs are used as is

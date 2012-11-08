@@ -140,8 +140,8 @@ sub new
     });
     
     # parse bnf
-    my $bnf_tokens = MarpaX::Parse::Lexer::BNF->lex($bnf_text);
-
+    my $bnf_tokens = MarpaX::Parse::Lexer::BNF->new->lex($bnf_text);
+    
     # save bnf tokens
     # TODO: this needs to $self->{o}->set('bnf_tokens' ...
 #    $self->set_option('bnf_tokens', join "\n", map { join ': ', @$_ } @$bnf_tokens);

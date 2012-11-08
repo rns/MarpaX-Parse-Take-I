@@ -4,9 +4,6 @@ use warnings;
 
 package MarpaX::Parse;
 
-
-use Carp qw{cluck};
-
 use YAML;
 
 use Marpa::R2;
@@ -14,10 +11,6 @@ use Marpa::R2;
 use MarpaX::Parse::Grammar;
 use MarpaX::Parse::Grammar::BNF;
 use MarpaX::Parse::Grammar::EBNF;
-
-use Encode qw{ encode is_utf8 };
-
-use XML::Twig;
 
 #
 # Any BNF grammar passed to MarpaX::Parse by setting <rules> to scalar 
@@ -63,20 +56,26 @@ sub new{
     # scalar means we have a BNF or EBNF grammar we need to parse to get rules
     elsif (ref $options->{rules} eq ""){
         # try bnf first
+        # backup rules
+        my $rules = $options->{rules};
         eval {
             $grammar = MarpaX::Parse::Grammar::BNF->new($options);
-        } or die "can't parse: $@";
+        };
         # now try EBNF
         if ($@){
             my $bnf_parsing_errors = $@;
             # TODO: catch EBNF parsing errors, e.g. := not ::=
+
+            # restore rules after Marpa::R2 creation attempt
+            $options->{rules} = $rules;
             eval {
-                $grammar = MarpaX::Parse::Grammar::EBNF->new($options->{rules});
+                $grammar = MarpaX::Parse::Grammar::EBNF->new($options);
             };
             if ($@){
                 # TODO: return parsing errors somehow 
                 my $ebnf_parsing_errors = $@;
-                $@ = $bnf_parsing_errors . $ebnf_parsing_errors;
+                $@ = "\n# bnf parsing error(s)\n"  .  $bnf_parsing_errors . 
+                     "# ebnf parsing error(s)\n" . $ebnf_parsing_errors;
                 return;
             }
         }

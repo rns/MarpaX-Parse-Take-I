@@ -8,63 +8,7 @@ use YAML;
 
 use Eval::Closure;
 
-sub new
-{
-    my $class = shift;
-    my $self = {};
-    bless $self, $class;
-    return $self;
-}
-
-# EBNF parser grammar setup
-my $ebnf_parser;
-
-sub _ebnf_to_rules
-{
-    my $self = shift;
-    
-    my $ebnf = shift;
-
-#    say Dump $ebnf;
-    
-    # parse ebnf
-    my $ebnf_tokens = MarpaX::Parse::EBNF->lex_ebnf_text($ebnf);
-    
-#    say "# EBNF tokens:\n", Dump $ebnf_tokens;
-    
-    # save ebnf tokens
-    $self->set_option('ebnf_tokens', join "\n", map { join ': ', @$_ } @$ebnf_tokens);
-
-    # show EBNF tokens if the option is set
-    
-#    say "# EBNF tokens:\n", $self->show_bnf_tokens if $self->{show_ebnf_tokens};
-#    $self->show_option('ebnf_tokens');
-    
-    # $bnf_parser is a package variable
-    # TODO: show bnf parser tokens, rules, and closures if the relevant options are set
-    
-    # parse EBNF tokens to Marpa::R2 rules
-#    say "# parsing EBNF";
-#    say $ebnf_parser->show_rules;
-    my $rules = $ebnf_parser->parse($ebnf_tokens);
-    
-#    say "# rules returned:", Dump $rules;
-    if (ref $rules->[0]->[0] eq "ARRAY"){
-        # sort rules by the maximum NoA number of actions
-        my %NoA_indices;
-        for my $i (0..@$rules-1){
-            my $rule_set = $rules->[$i];
-            my $NoA = grep { @$_ eq 3 } @$rule_set;
-            $NoA_indices{$NoA} = $i;
-        }
-        # among those with equal number of actions, select an arbitrary one
-        # TODO: ensure grammar amniguity
-        $rules = $rules->[ $NoA_indices{(sort { $b <=> $a } keys %NoA_indices)[0]} ];
-    }
-    
-    return $rules;
-}
-
+our @ISA = qw(MarpaX::Parse::Grammar);
 
 my $action_prolog = q{
     # start action prolog
@@ -268,99 +212,67 @@ my $ebnf_rules = [
 
 ];
 
-sub rules { $ebnf_rules }
-
-my $balanced_terminals = {
-    '%{.*?%}' => 'action_in_tags',
-    '".+?"' => 'literal',
-    "'.+?'" => 'literal',
-};
-my $balanced_terminals_re = join '|', keys %$balanced_terminals;
-
-my $literal_terminals = {
-    '::=' => '::=',
-    "|" => "'|'",
-    '(' => "'('",
-    ')' => "')'",
-    '?' => "'?'",
-    '*' => "'*'",
-    '+' => "'+'",
-};
-my $literal_terminals_re = join '|', map { quotemeta } keys %$literal_terminals;
-# and the rest must be symbols
-
-sub lex_ebnf_text
+sub new
 {
-    my $self = shift;
+    my $class = shift;
     
-    my $ebnf_text = shift;
+    my $options = shift;
     
-    my $tokens = [];
+    my $ebnf_text = $options->{rules};
     
-#    say $ebnf_text;
+    my $self = $class->SUPER::new({ 
+        rules => $ebnf_rules,
+        default_action => 'AoA',
+        quantifier_rules => 'recursive',
+        nullables_for_quantifiers => 1,
+    });
     
-    # trim ebnf text
-    $ebnf_text =~ s/^\s+//s;
-    $ebnf_text =~ s/\s+$//s;
-
-    # remove comments at line start and trim
-    $ebnf_text =~ s/^#.*?$//mg;
-    $ebnf_text =~ s/^\s+//s;
-    $ebnf_text =~ s/\s+$//s;
+    # tokenize ebnf text
+    my $l = MarpaX::Parse::Lexer::BNF->new;
     
-    # split on balanced
-    for my $on_balanced (split /($balanced_terminals_re)/s, $ebnf_text){
-        
-        # trim
-        $on_balanced =~ s/^\s+//s;
-        $on_balanced =~ s/\s+$//s;
-#        say "on balanced: <$on_balanced>";
-
-        # find balanced terminals
-        if ($on_balanced =~ /^$balanced_terminals_re$/s){
-            for my $re (keys %$balanced_terminals){
-                if ($on_balanced =~ m/^$re$/s){
-#                    say $balanced_terminals->{$re}, ": ",$on_balanced;
-                    push @$tokens, [ $balanced_terminals->{$re}, $on_balanced ];
-                }
-            }      
+    # we need parens and explicitt quantifiers for EBNF
+    $l->set_balanced_terminals({ 
+        '%{.*?%}' => 'action_in_tags',
+        '".+?"' => 'literal',
+        "'.+?'" => 'literal',
+    });
+    
+    $l->set_literal_terminals({
+        '::=' => '::=',
+        "|" => "'|'",
+        '(' => "'('",
+        ')' => "')'",
+        '?' => "'?'",
+        '*' => "'*'",
+        '+' => "'+'",
+    });
+    
+    my $ebnf_tokens = $l->lex($ebnf_text);
+    
+#    say "# ebnf tokens:\n", Dump $ebnf_tokens;
+    
+    # parse BNF tokens to Marpa::R2 rules
+    my $rules = MarpaX::Parse::Parser->new($self)->parse($ebnf_tokens);
+    
+#    say "# rules returned:", Dump $rules;
+    if (ref $rules->[0]->[0] eq "ARRAY"){
+        # sort rules by the maximum NoA number of actions
+        my %NoA_indices;
+        for my $i (0..@$rules-1){
+            my $rule_set = $rules->[$i];
+            my $NoA = grep { @$_ eq 3 } @$rule_set;
+            $NoA_indices{$NoA} = $i;
         }
-        else{
-
-            # remove comments and trim
-            $on_balanced =~ s/#.*?$//mg;
-            $on_balanced =~ s/^\s+//s;
-            $on_balanced =~ s/\s+$//s;
-            
-            # split on literals
-            for my $on_literal (split /($literal_terminals_re)/s, $on_balanced){
-                $on_literal =~ s/^\s+//s;
-                $on_literal =~ s/\s+$//s;
-#                say "on literal: <$on_literal>";
-                # find literal terminals
-#                say "on literal: <$on_literal>";
-                if ($on_literal =~ /^$literal_terminals_re$/){
-                    for my $re (keys %$literal_terminals){
-                        if ($on_literal =~ m/^\Q$re\E$/){
-#                            say $literal_terminals->{$re}, ": ",$on_literal;
-                            push @$tokens, [ $literal_terminals->{$re}, $on_literal ];
-                        }
-                    }      
-                }
-                else{
-                    for my $identifier (split /\s+/s, $on_literal){
-                        $identifier =~ s/^\s+//s;
-                        $identifier =~ s/\s+$//s;
-#                        say "identifier: $identifier";
-                        push @$tokens, [ 'identifier', $identifier ];
-                    }
-                }
-            }
-        }
+        # among those with equal number of actions, select an arbitrary one
+        # TODO: ensure grammar amniguity
+        $rules = $rules->[ $NoA_indices{(sort { $b <=> $a } keys %NoA_indices)[0]} ];
     }
-
-#    say "# ebnf tokens ", Dump $tokens;
-    return $tokens; 
+    
+    $options->{rules} = $rules;
+    
+    $self->build($options);
+    
+    bless $self, $class;
 }
 
 1;

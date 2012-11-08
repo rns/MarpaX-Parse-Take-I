@@ -35,7 +35,7 @@ sub _extract_lexer_rules
     my $self = shift;
     
     # TODO: _extract_terminals needs to be called rather than using terminals
-    my $terminals = $self->{g}->_extract_terminals;
+    my $terminals = $self->_extract_terminals;
     
 #    say "# _extract_lexer_rules", Dump $terminals;
 #    $self->show_option('rules');
@@ -166,6 +166,53 @@ sub lex
     return $tokens;
 }
 
+sub _extract_terminals
+{
+    my $self = shift;
+    
+    my $symbols = $self->_extract_symbols;
+
+#    say "# _extract_terminals: symbols:", Dump $symbols;
+    
+    my $terminals = [];
+    for my $symbol (keys %$symbols){
+        if ($self->{g}->{grammar}->check_terminal($symbol)){
+            push @$terminals, $symbol;
+        }
+    }
+    
+#    say "# _extract_terminals: terminals:", Dump $terminals;
+    
+    return $terminals;
+}
+
+sub _extract_symbols
+{
+    my $self = shift;
+    
+    my $rules = $self->{g}->{options}->{rules};
+    
+    my $symbols = {};
+    
+    for my $rule (@$rules){
+        my ($lhs, $rhs);
+        given (ref $rule){
+            when ("HASH"){
+                # get the rule's parts
+                $lhs = $rule->{lhs};
+                $rhs = $rule->{rhs};
+            }
+            when ("ARRAY"){
+                # get the rule's parts
+                ($lhs, $rhs) = @$rule;
+            }
+        }
+        for my $symbol ($lhs, @$rhs){
+            $symbols->{$symbol} = undef;
+        }
+    }
+    return $symbols;
+}
 
 1;
 
