@@ -9,12 +9,37 @@ use YAML;
 use_ok 'MarpaX::Parse';
 
 for my $data (
-[ 
-    q{ r ::= s1 s2 r1 }, <<GRAMMAR_TEXT, <<INPUT
-0: r -> s1 s2 r1
-GRAMMAR_TEXT
-v vndn
-INPUT
+
+[   
+    q{
+        greeting ::= ('Hi' | 'Hello' | 'hi' | 'hello' ) comma? (world | me | others)? 
+            %{ 
+#                say Dump \@_;
+                shift;
+                my ($hello, $comma, $name) = @_;
+                if ($comma){
+                    join ' ', "$hello,", $name eq "parser" ? "world" : "I'm not $name, I'm parser";
+                }
+                elsif ($name eq "parser") {
+                    "$hello me? $hello you!"
+                }
+                else {
+                    "$hello $name? How come?"
+                }
+            %}
+        world ::= 'world'
+        me    ::= 'parser'
+        others ::= 'qr/\w+/'
+        comma ::= ','
+
+    }, 
+    undef, 
+    [ 'Hello, parser',  'Hello parser',         'Hello, fred',                     'Hello fred' ], 
+    [ 'Hello, world',   'Hello me? Hello you!', "Hello, I'm not fred, I'm parser", 'Hello fred? How come?' ]
+],
+
+[
+    q{ r ::= s1 s2 r1 }, q{0: r -> s1 s2 r1},
 ],
 
 [ 
@@ -24,25 +49,49 @@ INPUT
 EOT
 ],
 
-[ q{ 
-    s ::= x ( (',' x) | (','? conj x) )* 
-}, '' ],
+[ q{ s ::= x ( (',' x) | (','? conj x) )* }, <<EOT
+0: s -> x s__subrule2*
+1: s__subrule0 -> ',' x
+2: s__subrule1 -> ',' conj x
+3: s__subrule2 -> s__subrule0
+4: s__subrule2 -> s__subrule1
+5: s__subrule2* -> s__subrule2
+6: s__subrule2* -> s__subrule2* s__subrule2
+7: s__subrule2* -> /* empty !used */
+8: ',' -> /* empty !used */
+EOT
+],
     
     ){
-    my ($grammar, $rules) = @$data;
-
+    my ($grammar, $rules, $input, $output) = @$data;
+    
+    ($input, $output) = map { not (ref $_) ? [ $_ ] : $_ } ($input, $output);
+    
     my $ebnf = MarpaX::Parse->new({
         rules => $grammar,
         ebnf => 1,
-        show_tokens => 1,
         quantifier_rules => 'recursive',
         nullables_for_quantifiers => 1,
-        show_bnf_rules => 1,
     });
     
-    my $got_rules = $ebnf->show_rules;
-    unless (is "$got_rules\n", $rules, "parsed $grammar"){
-        say $got_rules;
+#    say $ebnf->show_rules;
+    
+    # test the rules the grammar is parsed to
+    if (defined $rules){
+        ($grammar, $rules) = map { s/^\s+//; s/\s+$//; $_ } ($grammar, $rules);
+        unless (is my $got_rules = $ebnf->show_rules, $rules, "parsed '$grammar' to rules"){
+            say $got_rules;
+        }
+    }
+    
+    # skip empty output
+    # test if out=p(in)
+    for my $i (0..@$input-1){
+        my ($in, $out) = map { $_->[$i] } ($input, $output);
+        next unless $in and $out;
+        unless (is my $got = $ebnf->parse($in) || 'No parse.', $out, "parsed '$in' to '$out' using EBNF with embedded actions"){
+            say Dump $got;            
+        }
     }
 }
 
