@@ -19,9 +19,11 @@ my $AoA_with_embedded_actions = q{
         term  
         ( 
             ( 
-                '+' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
+                '+'
+                %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
                 |
-                '-' %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
+                '-' 
+                %{ shift; my @c = grep { defined } @_; @c > 1 ? \@c : shift @c %} 
             ) 
             term 
         )* 

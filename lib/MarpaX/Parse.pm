@@ -27,19 +27,6 @@ use Clone qw(clone);
 =pod distro module layout
 
 # 
-use MarpaX::Parse;
-
-my $p = MarpaX::Parse->new( {  
-    rules => q{} 
-    ...
-} ) or die "can't create parser";
-
-my $output = $p->parse( $input );
-
-#
-
-my $out = MarpaX::Parse->new( {  rules => q{} } )->parse( $in );
-
 MarpaX::Parse
     
     grammar
@@ -832,3 +819,39 @@ sub show_parse_forest{
 
 
 1;
+__END__
+=head SYNOPSIS
+
+    use MarpaX::Parse;
+
+    # EBNF hello world
+    greeting ::= ( 'Hi' | 'Hello' | 'hi' | 'hello' ) ','? (world | me ) %{ %}
+    world ::= 'world'
+    me ::= 'parser'
+        
+
+    my $grammar = q{ 
+        
+        greeting ::= hello ',' name %{ 
+            join ' ', $_[1] . $_[3] eq 'parser' ? 
+        %}
+
+        hello   ::= 'Hello'
+        name    ::= parser | world
+        
+        me      ::= 'parser' 
+        world   ::= 'world'
+
+    };
+
+    my $p     = MarpaX::Parse->new( $rules ) or die "can't create parser";
+    my $out   = $p->parse( 'Hello, parser!' );
+
+    my $output = $p->parse( $input );
+
+#
+
+my $out = MarpaX::Parse->new( {  rules => q{} } )->parse( $in );
+
+=cut
+
