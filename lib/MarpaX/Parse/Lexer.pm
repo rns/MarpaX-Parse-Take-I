@@ -85,7 +85,6 @@ sub lex
     #$self->show_option('literals');
 
     #$self->show_option('lexer_rules');
-    warn Dump $lex;
     
     # TODO: add 'default' rule (as in given/when) to apply when 
     # none of the other rules matched (for BNF parsing)

@@ -69,9 +69,6 @@ sub new{
     
     my $self = {};
     
-    # clone options to enable adding rules to grammar
-    $self->{options} = clone $options;
-
     # set defaults
     $self->{quantifier_rules} //= 'sequence';
     $self->{ambiguity} //= 'input_model';
@@ -94,6 +91,10 @@ sub build {
     my $self = shift;
     
     my $options = shift;
+
+    # clone options to enable adding rules to grammar
+    $self->{options} = clone $options;
+
     
     # set defaults
     $self->{quantifier_rules}               //= 'sequence';
