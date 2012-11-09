@@ -75,7 +75,9 @@ sub build {
 
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
-
+    
+    say Dump $self->{options};
+    
     # extract this module options 
     for my $o (qw{
             quantifier_rules

@@ -75,15 +75,11 @@ sub new{
         }
     }
 
-    # extract grammar options
-    my $grammar_options = {};
-    for my $o (@Marpa_grammar_options){
-        if (exists $options->{$o}){
-            $grammar_options->{$o} = $options->{$o};
-            delete $options->{$o};
-        }
-    }
-
+    # the rest is assumed to the grammar options
+    my $grammar_options = $options;
+    
+    say Dump $grammar_options;
+    
     my $grammar;
     # array ref means we have rules
     if (ref $grammar_options->{rules} eq "ARRAY"){  

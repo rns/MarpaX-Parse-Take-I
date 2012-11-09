@@ -52,7 +52,7 @@ my $grammar = q{
 my $bnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'AoA',
-});
+}) or die "Can't create MarpaX::Parse: $@";
 
 isa_ok $bnf, 'MarpaX::Parse';
 
