@@ -1,3 +1,5 @@
+use Test::More;
+
 =pod todo test I have no time to markup as such
 
 # capturing subrules
@@ -33,3 +35,5 @@ greeting ::= (hello: 'Hi' | 'Hello' | 'hi' | 'hello' ) (comma: ',')? (name: worl
         comma ::= ','
 
 =cut
+
+done_testing;
