@@ -135,11 +135,15 @@ sub new
     
     my $bnf_text = $options->{rules};
     
+    #
+    # TODO: build $bnf_rules only once (package variable $bnf_parser)
+    # ditto for EBNF
+    #
     my $self = $class->SUPER::new({ 
         rules          => $bnf_rules,
         default_action => 'MarpaX::Parse::Tree::AoA',
     });
-    
+        
     # parse bnf
     my $bnf_tokens = MarpaX::Parse::Lexer::BNF->new->lex($bnf_text);
     

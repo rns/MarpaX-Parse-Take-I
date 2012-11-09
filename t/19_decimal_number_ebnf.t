@@ -10,7 +10,8 @@ use_ok 'MarpaX::Parse';
 
 my $grammar = q{
 
-    expr    ::= '-'? digit+ ('.' digit+)?
+    expr    ::= minus? digit+ ('.' digit+)?
+    minus   ::= '-'
     digit   ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
 };
@@ -18,8 +19,7 @@ my $grammar = q{
 my $ebnf = MarpaX::Parse->new({
     rules => $grammar,
     default_action => 'xml',
-    ebnf => 1,
-});
+}) or die "Can't create MarpaX::Parse: $@";
 
 isa_ok $ebnf, 'MarpaX::Parse';
 
@@ -38,7 +38,7 @@ for my $number (@$numbers){
     # setup XML parse tree
     my $t = XML::Twig->new;
     $t->parse($xml);
-
+    
     unless (is $t->root->text, $number, "number $number lexed and parsed with EBNF"){
         say $ebnf->show_parse_tree;
     }

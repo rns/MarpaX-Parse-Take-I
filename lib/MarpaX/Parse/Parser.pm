@@ -18,7 +18,7 @@ sub new{
     
     my $self = {};
 
-#    say "# parser:\n", Dump $options;
+    say "# parser:\n", Dump $options;
     
     # extract the grammar and the default action for it
     $self->{g}  = $options->{grammar} or die 'grammar required';
@@ -209,7 +209,7 @@ sub parse{
         # use dumper based on default_action
         my $value_dump = ref $value ? 
             $self->{da} eq 'MarpaX::Parse::Tree::tree' ?
-                $self->{tree_package}->show_parse_tree($value, 'text') 
+                MarpaX::Parse::Tree->show_parse_tree($value, 'text') 
                 :
                 Dump $value
             :
@@ -245,6 +245,7 @@ sub parse{
     
 }
 
+=pod
 #
 # TODO: compatibility-only, both to be deleted
 #
@@ -257,6 +258,7 @@ sub show_parse_forest{
     my $self = shift;
     $self->{tree_package}->show_parse_forest(@_);
 }
+=cut
 
 1;
 

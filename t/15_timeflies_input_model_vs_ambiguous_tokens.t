@@ -115,23 +115,24 @@ sub tokenize {
 # input
 my $sentence = 'time flies like an arrow, but fruit flies like a banana';
 
+my $tree_type = 'sexpr';
 #
 # set up the grammar handling ambiguity with input model
 #
 my $mp_IM = MarpaX::Parse->new({
     rules => $grammar,
-    default_action => 'sexpr',
+    default_action => $tree_type,
     ambiguity => 'input_model',
-});
+})  or die "Can't create MarpaX::Parse: $@";
 
 #
 # set up the grammar handling ambiguity with ambiguous tokens
 #
 my $mp_AT = MarpaX::Parse->new({
     rules => $grammar,
-    default_action => 'sexpr',
+    default_action => $tree_type,
     ambiguity => 'tokens',
-});
+}) or die "Can't create MarpaX::Parse: $@";
 
 isa_ok $mp_IM, 'MarpaX::Parse';
 
@@ -154,13 +155,17 @@ my $expected_AT = <<EOT;
 (S (C (NP (noun (n time))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article an) (noun (n arrow))))))) (comma ,) (conjunction but) (C (NP (noun (n fruit))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article a) (noun (n banana))))))))
 EOT
 
+use MarpaX::Parse::Tree;
+my $t_IM = MarpaX::Parse::Tree->new({ grammar => $mp_IM->grammar, type => $tree_type});
+
 # tests
-is  join("\n", map { $mp_IM->show_parse_tree($_) } sort @input_model_parses) . "\n", 
+is  join("\n", map { $t_IM->show_parse_tree($_) } sort @input_model_parses) . "\n", 
     $expected_IM, 
     "ambiguous sentence ‘$sentence’ parsed using alternate()/earleme_complete() input model";
 
+my $t_AT = MarpaX::Parse::Tree->new({ grammar => $mp_AT->grammar, type => $tree_type});
 
-is  join("\n", map { $mp_AT->show_parse_tree($_) } sort @tokens_parses) . "\n", 
+is  join("\n", map { $t_AT->show_parse_tree($_) } sort @tokens_parses) . "\n", 
     $expected_AT, 
     "ambiguous sentence ‘$sentence’ parsed using ambiguous tokens";
 

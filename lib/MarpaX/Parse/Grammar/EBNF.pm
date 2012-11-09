@@ -227,7 +227,7 @@ sub new
         quantifier_rules => 'recursive',
         nullables_for_quantifiers => 1,
     });
-    
+        
     # tokenize ebnf text
     my $l = MarpaX::Parse::Lexer::BNF->new;
     
@@ -254,7 +254,7 @@ sub new
     
     # parse EBNF tokens to Marpa::R2 rules
     my $rules = MarpaX::Parse::Parser->new({ 
-        grammar => $self, 
+        grammar => $self->grammar, 
         default_action => $self->{default_action} ,
         closures => $self->{closures},
     })->parse($ebnf_tokens);

@@ -12,6 +12,8 @@ use MarpaX::Parse::Grammar;
 use MarpaX::Parse::Grammar::BNF;
 use MarpaX::Parse::Grammar::EBNF;
 
+use MarpaX::Parse::Tree;
+
 use Clone qw{clone};
 
 #
@@ -68,7 +70,12 @@ sub new{
     
     # extract recognizer options to pass them to parser
     my $recognizer_options = {};
-    for my $o (@Marpa_recognizer_options){
+    for my $o (@Marpa_recognizer_options, qw{
+        ambiguity 
+        recognition_failure_sub 
+        show_recognition_failures
+        }
+        ){
         if (exists $options->{$o}){
             $recognizer_options->{$o} = $options->{$o};
             delete $options->{$o};

@@ -103,8 +103,7 @@ sub build {
     $self->_quantifiers_to_rules( \@rules );
 
     # extract closures and generate actions for Recognizer
-    my $closures = $self->_closures_to_actions( \@rules );
-    $self->{closures} = $closures;
+    $self->{closures} = $self->_closures_to_actions( \@rules );
 
     # handle default action
     $self->_set_default_action($options);    

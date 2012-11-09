@@ -128,6 +128,8 @@ sub traverse_HoA{
 
     my $tree = shift;
     
+    say Dump;
+    
     my (@int, @frac, $neg);
 
     # positive integer or float
