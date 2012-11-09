@@ -48,11 +48,11 @@ sub do_what_I_mean {
     scalar @children > 1 ? \@children : shift @children;
 }
 
-my $me = MarpaX::Parse->new({
+my $mt = MarpaX::Parse->new({
     start => 'expr',
     rules => $rules,
     default_action => __PACKAGE__ . '::do_what_I_mean',
-});
+}) or die "Failed to create MarpaX::Parse: $@";
 
 my $number = [
     [ '1', '1' ],
@@ -64,7 +64,7 @@ my $number = [
 # setup recognizer
 my $recognizer =
     Marpa::R2::Recognizer->new( { 
-        grammar => $me->grammar, 
+        grammar => $mt->grammar, 
     } );
 die 'Failed to create recognizer' if not $recognizer;
 
@@ -93,11 +93,11 @@ END_OF_PARSE
 # The same can be done with parse method of MarpaX::Parse.
 # The default action AoA (array of arrays) will be set by MarpaX::Parse.
 #
-my $me_AoA = MarpaX::Parse->new({
+my $mt_AoA = MarpaX::Parse->new({
     rules => $rules
-});
+}) or die "Failed to create MarpaX::Parse: $@";
 
-$value = $me_AoA->parse($number);
+$value = $mt_AoA->parse($number);
 
 is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with MarpaX::Parse::parse";
 ---

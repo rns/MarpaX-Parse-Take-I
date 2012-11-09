@@ -1,8 +1,8 @@
+package MarpaX::Parse;
+
 use 5.010;
 use strict;
 use warnings;
-
-package MarpaX::Parse;
 
 use YAML;
 
@@ -27,52 +27,87 @@ use Clone qw{clone};
 # to MarpaX::Parse are shown # by show_* options
 #
 
+my @Marpa_recognizer_options = qw{
+    closures
+    end
+    event_if_expected
+    max_parses
+    ranking_method
+    too_many_earley_items
+    trace_actions
+    trace_file_handle
+    trace_terminals
+    trace_values
+    warnings
+};
+
+my @Marpa_grammar_options = qw{
+    action_object
+    actions
+    default_action
+    default_empty_action
+    inaccessible_ok
+    infinite_action
+    rules
+    start
+    symbols
+    terminals
+    trace_file_handle
+    unproductive_ok
+    warnings
+};
+
 sub new{
 
     my $class = shift;
     my $options = shift;
     
+    ref $options eq "HASH" or die "options must be a HASH; got $options instead";
+    
     my $self = {};
     
-    # TODO: extract recognizer options and pass them to parser
-    my @recognizer_options = qw{
-        closures
-        end
-        event_if_expected
-        max_parses
-        ranking_method
-        too_many_earley_items
-        trace_actions
-        trace_file_handle
-        trace_terminals
-        trace_values
-        warnings
-    };
+    # extract recognizer options to pass them to parser
+    my $recognizer_options = {};
+    for my $o (@Marpa_recognizer_options){
+        if (exists $options->{$o}){
+            $recognizer_options->{$o} = $options->{$o};
+            delete $options->{$o};
+        }
+    }
+
+    # extract grammar options
+    my $grammar_options = {};
+    for my $o (@Marpa_grammar_options){
+        if (exists $options->{$o}){
+            $grammar_options->{$o} = $options->{$o};
+            delete $options->{$o};
+        }
+    }
 
     my $grammar;
     # array ref means we have rules
-    if (ref $options->{rules} eq "ARRAY"){  
+    if (ref $grammar_options->{rules} eq "ARRAY"){  
         # set up and save the grammar
-        $grammar = MarpaX::Parse::Grammar->new($options);
+        $grammar = MarpaX::Parse::Grammar->new($grammar_options);
     }
     # scalar means we have a BNF or EBNF grammar we need to parse to get rules
     elsif (ref $options->{rules} eq ""){
         # try bnf first
         eval {
-            $grammar = MarpaX::Parse::Grammar::BNF->new(clone $options);
+            $grammar = MarpaX::Parse::Grammar::BNF->new(clone $grammar_options);
         };
         # now try EBNF
         if ($@){
             my $bnf_parsing_errors = $@;
             # TODO: catch EBNF parsing errors, e.g. := not ::=
             eval {
-                $grammar = MarpaX::Parse::Grammar::EBNF->new(clone $options);
+                $grammar = MarpaX::Parse::Grammar::EBNF->new(clone $grammar_options);
             };
             if ($@){
                 # TODO: return parsing errors somehow 
                 my $ebnf_parsing_errors = $@;
                 $@ = "\n# bnf parsing error(s)\n"  .  $bnf_parsing_errors . 
-                     "# ebnf parsing error(s)\n" . $ebnf_parsing_errors;
+                       "# ebnf parsing error(s)\n" . $ebnf_parsing_errors;
                 return;
             }
         }
@@ -84,9 +119,12 @@ sub new{
     
     # save grammar
     $self->{g} = $grammar;
-
+    
     # set up parser
-    $self->{p} = MarpaX::Parse::Parser->new( $grammar );
+    $recognizer_options->{grammar}        = $grammar->grammar;
+    $recognizer_options->{default_action} = $grammar_options->{default_action};
+    $recognizer_options->{closures}       = $grammar->{closures};
+    $self->{p} = MarpaX::Parse::Parser->new($recognizer_options);
     
     bless $self, $class;
 }

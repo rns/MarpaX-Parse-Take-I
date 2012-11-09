@@ -136,7 +136,7 @@ sub new
     my $bnf_text = $options->{rules};
     
     my $self = $class->SUPER::new({ 
-        rules => clone($bnf_rules),
+        rules          => $bnf_rules,
         default_action => 'AoA',
     });
     
@@ -155,7 +155,10 @@ sub new
     # TODO: show bnf parser tokens, rules, and closures if the relevant options are set
     
     # parse BNF tokens to Marpa::R2 rules
-    $options->{rules} = MarpaX::Parse::Parser->new($self)->parse($bnf_tokens);
+    $options->{rules} = 
+        MarpaX::Parse::Parser->
+            new({ grammar => $self->grammar })->
+                parse($bnf_tokens);
     
     $self->build($options);
     

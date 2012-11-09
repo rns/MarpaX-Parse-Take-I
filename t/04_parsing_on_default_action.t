@@ -53,7 +53,7 @@ sub do_what_I_mean {
     scalar @values > 1 ? \@values : shift @values;
 }
 
-# test constructor
+# test constructor with invalid arguments
 my $parser = undef;
 eval {
     $parser = MarpaX::Parse::Parser->new();

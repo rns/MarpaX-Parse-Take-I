@@ -20,8 +20,29 @@ sub new{
 
     # extract the grammar and the default action for it
     $self->{g}  = $options->{grammar} or die 'grammar required';
-    $self->{da} = $options->{default_action};
+    $self->{da} = $options->{default_action} || 'MarpaX::Parser::Tree::AoA';
     delete $options->{default_action};
+    
+    # default_action by, well, default
+    $self->{da} //= 'MarpaX::Parser::Tree::AoA';
+    
+    # extract other options of this module
+    # TODO: die on improper option values
+    for my $o (qw{
+        ambiguity 
+        recognition_failure_sub 
+        show_recognition_failures
+        }){
+        if (exists $options->{$o}){
+            $self->{$o} = $options->{$o};
+            delete $options->{$o};
+        }
+    }
+
+    # set default for this module options
+    $self->{ambiguity}                  //= 'input_model';
+    $self->{recognition_failure_sub}    //= \&recognition_failure;
+    $self->{show_recognition_failures}  //= 0;
     
     # other options must be those of the recognizer
     $self->{ro} = $options;
@@ -68,7 +89,6 @@ sub parse{
     
     # init recognition failures
     $self->{recognition_failures} = [];
-    $self->{recognition_failure_sub} = \&recognition_failure;
     
     # input can be name/value pair arrayref or a string
     # name/value pair arrayrefs are used as is
@@ -77,7 +97,7 @@ sub parse{
         $tokens = $input;
         # TODO: grammar data can be shown here for tracing
         # find ambiguous tokens and disambiguate them by adding rules to the grammar
-        if ($self->{g}->{ambiguity} eq 'tokens'){
+        if ($self->{ambiguity} eq 'tokens'){
             # rules for the ambiguous token must be unique
             my $ambiguous_token_rules = {};
             my $rules_name = ref $self->{options}->{rules};
@@ -120,7 +140,7 @@ sub parse{
                 # add $bnf to $self->{options}->{$rules} and rebuild the grammar
                 $self->merge_token_rules($bnf);
             }
-        } ## ($self->{g}->{ambiguity} eq 'tokens'
+        } ## ($self->{ambiguity} eq 'tokens'
     } ## if (ref $input eq "ARRAY"){
     # strings are split
     else{
@@ -130,22 +150,25 @@ sub parse{
     
     # TODO: option is needed to show tokens here
     
+    # set recognizer options we received and got
+    my $recce_opts = $self->{ro};
+
     # get closures for the recognizer from the grammar if we can
     my $grammar  = $self->{g};
-    my $closures;
-    if (ref $grammar eq "MarpaX::Parse::Grammar"){
-       $closures = $self->{g}->{closures}; 
+    say "grammar is ", ref $grammar;   
+    # including descendants: (E)BNF 
+    if (ref $grammar =~ /^MarpaX::Parse::Grammar/){
+        say "setting closures";
+        $recce_opts->{closures} = $self->{g}->{closures}; 
     }
     
     # set default_action for the grammar if we can
     if ($self->{da} and ref $grammar eq "Marpa::R2::Grammar"){
         $grammar->set( { default_action => $self->{da} } );
     }
-    
-    # set recognizer options we received and got
-    my $recce_opts = $self->{ro};
+
+    # set grammar
     $recce_opts->{grammar}  = $grammar;
-    $recce_opts->{closures} = $closures;
     
     # setup recognizer
     my $recognizer = Marpa::R2::Recognizer->new( $recce_opts ) 
@@ -233,4 +256,5 @@ sub show_parse_forest{
 }
 
 1;
+
 __END__

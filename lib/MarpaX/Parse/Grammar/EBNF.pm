@@ -253,7 +253,7 @@ sub new
 #    say "# ebnf tokens:\n", Dump $ebnf_tokens;
     
     # parse BNF tokens to Marpa::R2 rules
-    my $rules = MarpaX::Parse::Parser->new($self)->parse($ebnf_tokens);
+    my $rules = MarpaX::Parse::Parser->new({ grammar => $self })->parse($ebnf_tokens);
     
 #    say "# rules returned:", Dump $rules;
     if (ref $rules->[0]->[0] eq "ARRAY"){

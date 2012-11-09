@@ -37,40 +37,25 @@ my $options = {
     show_symbols => undef,
     show_terminals => undef,
     
-    # stage: recognition by Marpa::R2 
-    show_recognition_failures => undef,
-    recognition_failure_sub => undef,
-
-    # handle ambuous tokens with input model (alternate()/earleme_complete()
-    ambiguity => undef,
-    
-    # transform quantified symbols into sequence (by default) or recursive rules
-    quantifier_rules => undef,
-
-    # if true, nullable symbols will be added instead removing the rules 
-    # with ?/*-quanfitied symbols
-    nullables_for_quantifiers => undef,
-
-    ebnf => undef,
-
-    # transform quantified symbols into sequence (by default) or recursive rules
-    quantifier_rules => undef,
-
-    # if true, nullable symbols will be added instead removing the rules 
-    # with ?/*-quanfitied symbols
-    nullables_for_quantifiers => undef,
-    
 };
+
+# TODO: this needs to be in the doc
+# transform quantified symbols into sequence (by default) or recursive rules
+# quantifier_rules => undef,
+
+# if true, nullable symbols will be added instead removing the rules 
+# with ?/*-quanfitied symbols
+# nullables_for_quantifiers => undef,
 
 sub new{
 
-    my $class = shift;
+    my $class   = shift;
     my $options = shift;
     
     my $self = {};
-    
+    # this module's options are extracted and their defaults are set by build()
     bless $self, $class;
-    
+
     $self->build($options);
 
     return $self;
@@ -91,20 +76,9 @@ sub build {
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
 
-    # set defaults
-    $self->{quantifier_rules}           //= 'sequence';
-    $self->{ambiguity}                  //= 'input_model';
-    $self->{quantifier_rules}           //= 'sequence';
-    $self->{recognition_failure_sub}    //= \&recognition_failure;
-    $self->{nullables_for_quantifiers}  //= 1;
-    
-    
     # extract this module options 
     for my $o (qw{
             quantifier_rules
-            ambiguity
-            quantifier_rules
-            recognition_failure_sub
             nullables_for_quantifiers
         }){
         if (exists $options->{$o}){
@@ -112,8 +86,15 @@ sub build {
             delete $options->{$o};
         }
     }
+
+    # set defaults for this module options 
+    $self->{quantifier_rules}           //= 'sequence';
+    $self->{nullables_for_quantifiers}  //= 1;
     
     # transform rules
+    die "options->{rules} must be an ARRAY rather than '" . 
+        ($options->{rules} //= '') . "'" 
+        unless ref $options->{rules} eq "ARRAY";
     my @rules = @{ $options->{rules} };
 
     # quantifiers to rules
