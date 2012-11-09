@@ -4,8 +4,6 @@ use 5.010;
 use strict;
 use warnings;
 
-use MarpaX::Parse::Grammar;
-
 use YAML;
 
 # TODO: token positions in input to facilitate error reporting
