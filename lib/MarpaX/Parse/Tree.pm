@@ -4,6 +4,9 @@ use 5.010;
 use strict;
 use warnings;
 
+# TODO: load modules on demand
+use Module::Runtime qw{ use_module };
+
 use Marpa::R2;
 
 use Tree::Simple 'use_weak_refs';
@@ -13,24 +16,44 @@ use Tree::Simple::View::HTML;
 
 use Data::TreeDumper;
 
-use Encode qw{ is_utf8 };
-
 use XML::Twig;
 
-sub new{
+use Text::Balanced qw(extract_delimited extract_bracketed);
 
+sub new
+{
     my $class = shift;
-    my $grammar = shift;
-  
+    my $options = shift;
+        
     my $self = {};
-    bless $self, $class;
-    $self->{grammar} = $grammar;
-    $self;
-}
 
-# ======================================
-# default actions (building parse trees)
-# ======================================
+    # get options
+    $self->{g} = $options->{grammar};
+    $self->{t} = $options->{type};
+    
+    # load the modules for the tree type on demand
+    # at the moment, AoA HoA HoH xml sexpr and tree are supported
+    if ($self->{t} eq "tree"){
+        use_module 'Tree::Simple';
+        Tree::Simple::import('use_weak_refs');
+        use_module 'Tree::Simple::Visitor';
+        use_module 'Tree::Simple::View::DHTML';
+        use_module 'Tree::Simple::View::HTML';
+        use_module 'Data::TreeDumper';
+    }
+    elsif ($self->{t} eq "xml"){
+        use_module 'XML::Twig';
+    }
+    elsif ($self->{t} eq 'sexpr'){
+        use_module 'Text::Balanced';
+        Text::Balanced->import(qw(extract_delimited extract_bracketed));
+    }
+    else{
+        use_module 'Data::TreeDumper';
+    }
+  
+    bless $self, $class;
+}
 
 sub AoA { 
 
@@ -130,7 +153,7 @@ sub AoA_with_rule_signatures {
 
 # s-expression
 sub sexpr { 
-
+    
     # The per-parse variable.
     shift;
     
@@ -216,6 +239,12 @@ sub xml {
     # replace symbols quantifier symbols (not valid in XML tags) with plural (hopefully)
     $lhs =~ s/(\+|\*)$/s/;
     
+    #
+    # TODO: if start symbol, prepend <?xml version="1.0" encoding="UTF-8" standlone="yes"?>
+    # to the return value and convert it to UTF-8.
+    # Note: this requires start() accessor of Marpa::R2::Grammar
+    #
+    
     # wrap xml element
     return 
           "<$lhs>" 
@@ -228,7 +257,7 @@ sub show_parse_forest{
     my $format = shift || 'text';
 
     # POSSIBLE TODO: use start symbol to denote parse trees, if we extracted one
-    my $header = 'Parse Tree'; # $self->{start} 
+    my $header = 'Parse Tree'; # another use case for start() accessor of Marpa::R2::Grammar
 
     my $forest = '';
     for my $i (0..@{$self->{parse_forest}}-1){
@@ -282,11 +311,15 @@ sub show_parse_tree{
             DISPLAY_OBJECT_TYPE => 0,
         )
     }
-    # utf8 string, must be XML
-    elsif (is_utf8($tree) and index ($tree, "<\?xml/") >= 0) {
+    # string starting with xmldecl when lowercased, must be XML
+    elsif ($self->{t} eq "xml") {
         my $t = XML::Twig->new(pretty_print => 'indented');
         $t->parse($tree);
         return $t->sprint;
+    }
+    elsif ($self->{t} = 'sexpr'){
+        # TODO: pretty-printer for s-expressions
+        return $tree
     }
     # mere scalar
     else{
