@@ -1,7 +1,7 @@
 MarpaX-Parse, MarpaX::Tools-to-be
 =================================
 
-Parts of this module will be refactored out into individual modules and probably distros, if enough interest is generated.
+Parts of this module will be refactored out into individual modules and probably distros as MarpaX::Tools::*, if enough interest is seen.
 
 What It Is
 ----------
