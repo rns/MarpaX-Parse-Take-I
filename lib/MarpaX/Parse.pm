@@ -75,7 +75,7 @@ sub new{
         }
     }
 
-    # the rest is assumed to the grammar options
+    # the rest is assumed to be the grammar options
     my $grammar_options = $options;
     
     say Dump $grammar_options;
