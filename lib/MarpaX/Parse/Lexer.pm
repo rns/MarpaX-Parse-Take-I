@@ -176,7 +176,7 @@ sub _extract_terminals
     
     my $terminals = [];
     for my $symbol (keys %$symbols){
-        if ($self->{g}->{grammar}->check_terminal($symbol)){
+        if ($self->{g}->check_terminal($symbol)){
             push @$terminals, $symbol;
         }
     }
@@ -190,28 +190,20 @@ sub _extract_symbols
 {
     my $self = shift;
     
-    my $rules = $self->{g}->{options}->{rules};
+    my $grammar = $self->{g};
     
     my $symbols = {};
     
-    for my $rule (@$rules){
-        my ($lhs, $rhs);
-        given (ref $rule){
-            when ("HASH"){
-                # get the rule's parts
-                $lhs = $rule->{lhs};
-                $rhs = $rule->{rhs};
-            }
-            when ("ARRAY"){
-                # get the rule's parts
-                ($lhs, $rhs) = @$rule;
-            }
-        }
-        for my $symbol ($lhs, @$rhs){
+    my @rule_ids = $grammar->rule_ids();
+    
+    for my $rule_id (@rule_ids){
+        my ($lhs, @rhs) = $grammar->rule($rule_id);
+        for my $symbol ($lhs, @rhs){
             $symbols->{$symbol} = undef;
         }
     }
-    return $symbols;
+
+    $symbols;
 }
 
 1;

@@ -130,7 +130,7 @@ sub parse{
     } ## if (ref $input eq "ARRAY"){
     # strings are split
     else{
-        my $l = MarpaX::Parse::Lexer->new($self->{g});
+        my $l = MarpaX::Parse::Lexer->new($self->{g}->{grammar});
         $tokens = $l->lex($input);
     }
 
