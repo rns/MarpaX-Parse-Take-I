@@ -41,8 +41,9 @@ my $grammar = Marpa::R2::Grammar->new({
         [ digit => [qw('9')] ],
     ],
     actions => __PACKAGE__,
-    default_action => 'do_what_I_mean',
 });
+
+$grammar->set( { default_action => 'do_what_I_mean' } );
 
 $grammar->precompute();
 
