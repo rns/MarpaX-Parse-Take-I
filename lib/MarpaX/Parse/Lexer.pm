@@ -206,3 +206,6 @@ sub _extract_symbols
 
 1;
 
+__END__
+
+This module can be subclassed to use, e.g. Parse::Flex, to lex the input by overriding lex() method so that the lexer_rules be set as needed for the parser used and @$tokens be returned
