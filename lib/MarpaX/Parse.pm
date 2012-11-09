@@ -78,7 +78,7 @@ sub new{
     # the rest is assumed to be the grammar options
     my $grammar_options = $options;
     
-    say Dump $grammar_options;
+#    say "# new", ref $self, Dump $grammar_options;
     
     my $grammar;
     # array ref means we have rules
@@ -118,7 +118,7 @@ sub new{
     
     # set up parser
     $recognizer_options->{grammar}        = $grammar->grammar;
-    $recognizer_options->{default_action} = $grammar_options->{default_action};
+    $recognizer_options->{default_action} = $grammar->{default_action};
     $recognizer_options->{closures}       = $grammar->{closures};
     $self->{p} = MarpaX::Parse::Parser->new($recognizer_options);
     

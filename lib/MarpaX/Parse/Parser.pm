@@ -18,7 +18,7 @@ sub new{
     
     my $self = {};
 
-    say $options->{default_action};
+#    say "# parser:\n", Dump $options;
     
     # extract the grammar and the default action for it
     $self->{g}  = $options->{grammar} or die 'grammar required';
@@ -26,8 +26,9 @@ sub new{
     delete $options->{default_action};
     
     # default_action by, well, default
-    $self->{da} //= 'MarpaX::Parser::Tree::AoA';
-    say $options->{da};
+    $self->{da} //= 'MarpaX::Parse::Tree::AoA';
+
+#    say "# parser:\n", $options->{da};
     
     # extract other options of this module
     # TODO: die on improper option values

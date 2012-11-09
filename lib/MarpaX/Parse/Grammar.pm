@@ -76,7 +76,7 @@ sub build {
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
     
-    say Dump $self->{options};
+#    say "# build:", ref $self, Dump $self->{options};
     
     # extract this module options 
     for my $o (qw{
@@ -109,9 +109,6 @@ sub build {
     # handle default action
     $self->_set_default_action($options);    
 
-    # TODO: parse() needs this; to be removed
-    $self->{default_action} = $options->{default_action};
-    
     # set start to lhs of the first rule if not set
     if (not exists $options->{start}){
         $options->{start} = $self->_extract_start_symbol( \@rules );
@@ -181,7 +178,7 @@ sub _set_default_action
             $options->{default_action} = 'MarpaX::Parse::Tree::' . $da;
         }
     }
-    # otherwise set _default_action which prints the rules and their contents
+    # otherwise set default action which prints the rules and their contents
     else{
         $options->{default_action} = 'MarpaX::Parse::Tree::' . 'AoA';
     }

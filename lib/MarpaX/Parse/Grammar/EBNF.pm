@@ -223,7 +223,7 @@ sub new
     
     my $self = $class->SUPER::new({ 
         rules => clone($ebnf_rules),
-        default_action => 'AoA',
+        default_action => 'MarpaX::Parse::Tree::AoA',
         quantifier_rules => 'recursive',
         nullables_for_quantifiers => 1,
     });
@@ -252,8 +252,12 @@ sub new
     
 #    say "# ebnf tokens:\n", Dump $ebnf_tokens;
     
-    # parse BNF tokens to Marpa::R2 rules
-    my $rules = MarpaX::Parse::Parser->new({ grammar => $self })->parse($ebnf_tokens);
+    # parse EBNF tokens to Marpa::R2 rules
+    my $rules = MarpaX::Parse::Parser->new({ 
+        grammar => $self, 
+        default_action => $self->{default_action} ,
+        closures => $self->{closures},
+    })->parse($ebnf_tokens);
     
 #    say "# rules returned:", Dump $rules;
     if (ref $rules->[0]->[0] eq "ARRAY"){
