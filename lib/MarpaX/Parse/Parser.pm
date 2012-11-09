@@ -235,3 +235,45 @@ sub show_parse_forest{
 }
 
 1;
+__END__
+
+# grammar set up
+use Marpa::R2::Grammar;
+
+my $grammar = Marpa::R2::Grammar->new({
+    ...
+    default_action => 'tree'
+    ...
+});
+
+# parsing
+use MarpaX::Parser;
+
+#
+my $parser = MarpaX::Parser->new({
+    grammar => $grammar,
+});
+
+my $value = $p->parse($input);
+
+use MarpaX::Parse::Tree;
+
+# viewing/traversing
+
+
+use MarpaX::Parse::Tree::View;
+
+say $t->view;
+
+my $parser = MarpaX::Parse::Parser->new({
+    
+    grammar => Marpa::R2::Grammar->new({
+        ...
+        default_action => 'tree'
+        ...
+    }),
+
+})
+
+$p->parse($input) 
+

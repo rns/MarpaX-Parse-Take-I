@@ -13,7 +13,7 @@ use Tree::Simple::View::HTML;
 
 use Data::TreeDumper;
 
-use Encode qw{ encode is_utf8 };
+use Encode qw{ is_utf8 };
 
 use XML::Twig;
 
