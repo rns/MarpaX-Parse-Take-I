@@ -2,9 +2,11 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 4;
+use Test::More;
 
 use Marpa::R2;
+
+use MarpaX::Parse::Parser;
 
 # BNF for decimal numbers (the literals will be used as lexer regexes)
 #
@@ -43,8 +45,6 @@ my $grammar = Marpa::R2::Grammar->new({
     actions => __PACKAGE__,
 });
 
-$grammar->set( { default_action => 'do_what_I_mean' } );
-
 $grammar->precompute();
 
 sub do_what_I_mean { 
@@ -53,12 +53,13 @@ sub do_what_I_mean {
     scalar @values > 1 ? \@values : shift @values;
 }
 
-#
-# The Lexer
-#
-use MarpaX::Parse::Lexer;
-
-my $lexer = MarpaX::Parse::Lexer->new($grammar);
+# test constructor
+my $parser = undef;
+eval {
+    $parser = MarpaX::Parse::Parser->new();
+};
+like $@, qr/^grammar required/, "lack of grammar detected";
+is ($parser, undef, "constructor returned undef");
 
 #
 # The Dumper
@@ -72,34 +73,26 @@ $Data::Dumper::Indent = 0;
 # The Test
 #
 for my $test (
+
     [  '1234',     qq{[[['1','2'],'3'],'4']} ],
     [ '-1234.423', qq{['-',[[[['1','2'],'3'],'4'],'.',[['4','2'],'3']]]} ],
     [  '-123',     qq{['-',[['1','2'],'3']]} ],
     [  '1234.43',  qq{[[[['1','2'],'3'],'4'],'.',['4','3']]} ],
+
     ){
     my ($number, $expected) = @$test;
     
-    # setup the recognizer
-    my $recognizer = Marpa::R2::Recognizer->new( { 
-        grammar => $grammar, 
-    } ) or die 'Failed to create recognizer';
-    
-    # tokenize
-    my $tokens = $lexer->lex($number);
-    
-    # read
-    for my $token (@$tokens){
-        defined $recognizer->read( @$token ) or die "Recognition failed";
-    }
+    # setup the parser
+    my $parser = MarpaX::Parse::Parser->new({
+        grammar => $grammar,
+        default_action => __PACKAGE__ . '::' . 'do_what_I_mean'
+    }) or die 'Failed to create parser';
 
-    # evaluate
-    while ( defined( my $value_ref = $recognizer->value() ) ) {
-        my $value = $value_ref ? ${$value_ref} : 'No parse';
-        is Dumper($value), $expected, "$number lexed on literals and recognized";
-    }
-
+    # parse
+    my $value = $parser->parse($number);
+    
+    # check
+    is Dumper($value), $expected, "$number parsed";
 }
 
-
-
-
+done_testing;

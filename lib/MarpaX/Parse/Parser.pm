@@ -14,16 +14,19 @@ use MarpaX::Parse::Tree;
 sub new{
 
     my $class = shift;
-    my $grammar = shift;
-  
-    my $self = {};
-    bless $self, $class;
-    $self->{g} = $grammar;
+    my $options = shift;
     
-    # TODO: compatibility
-    $self->{tree_package} = MarpaX::Parse::Tree->new;
+    my $self = {};
 
-    $self;
+    # extract the grammar and the default action for it
+    $self->{g}  = $options->{grammar} or die 'grammar required';
+    $self->{da} = $options->{default_action};
+    delete $options->{default_action};
+    
+    # other options must be those of the recognizer
+    $self->{ro} = $options;
+    
+    bless $self, $class;
 }
 
 # recognition failures are not necessarily fatal so by default, 
@@ -61,7 +64,7 @@ sub parse{
 
     my $self = shift;
     my $input = shift;
-    # TODO: get %$features, split $input, set up $tokens
+    # TODO (NLP): get %$features, split $input, set up $tokens
     
     # init recognition failures
     $self->{recognition_failures} = [];
@@ -72,16 +75,9 @@ sub parse{
     my $tokens;
     if (ref $input eq "ARRAY"){
         $tokens = $input;
-        # show options if set
-
-#        $self->{g}->show_option('rules');
-#        $self->{g}->show_option('symbols');
-#        $self->{g}->show_option('terminals');
-#        $self->{g}->show_option('literals');
-
+        # TODO: grammar data can be shown here for tracing
         # find ambiguous tokens and disambiguate them by adding rules to the grammar
         if ($self->{g}->{ambiguity} eq 'tokens'){
-#            say "adding rules for ambiguous_tokens";
             # rules for the ambiguous token must be unique
             my $ambiguous_token_rules = {};
             my $rules_name = ref $self->{options}->{rules};
@@ -105,9 +101,7 @@ sub parse{
                     $ambiguous_token_rules->{$_}->{$names} = undef for @names;
                 }
             }
-#            _dump "disambiguated tokens", $tokens; 
             # add %$ambiguous_token_rules as generated
-#            _dump "ambiguous token rules", $ambiguous_token_rules;
             if ($rules_name eq "ARRAY"){
                 # lhs => [qw{rhs}]
                 my @rules = map { [ $_ => [ $ambiguous_token_rules->{$_} ] ] } keys %$ambiguous_token_rules;
@@ -130,29 +124,32 @@ sub parse{
     } ## if (ref $input eq "ARRAY"){
     # strings are split
     else{
-        my $l = MarpaX::Parse::Lexer->new($self->{g}->{grammar});
+        my $l = MarpaX::Parse::Lexer->new($self->{g});
         $tokens = $l->lex($input);
     }
-
-    $self->{g}->set_option('tokens', $tokens);
-    $self->{g}->show_option('tokens');
     
-    # get grammar and closures
-    my $grammar  = $self->{g}->{grammar};
-    my $closures = $self->{g}->{closures};
+    # TODO: option is needed to show tokens here
     
-#    $self->{g}->show_option('closures');
-
-#    say $self->get_option('tokens');
-#    say $self->get_option('rules');
-#    say $self->get_option('terminals');
-
+    # get closures for the recognizer from the grammar if we can
+    my $grammar  = $self->{g};
+    my $closures;
+    if (ref $grammar eq "MarpaX::Parse::Grammar"){
+       $closures = $self->{g}->{closures}; 
+    }
+    
+    # set default_action for the grammar if we can
+    if ($self->{da} and ref $grammar eq "Marpa::R2::Grammar"){
+        $grammar->set( { default_action => $self->{da} } );
+    }
+    
+    # set recognizer options we received and got
+    my $recce_opts = $self->{ro};
+    $recce_opts->{grammar}  = $grammar;
+    $recce_opts->{closures} = $closures;
+    
     # setup recognizer
-    my $recognizer = Marpa::R2::Recognizer->new( { 
-        grammar => $grammar, 
-        closures => $closures,
-#        trace_terminals => 3,
-    } ) or die 'Failed to create recognizer';
+    my $recognizer = Marpa::R2::Recognizer->new( $recce_opts ) 
+       or die 'Failed to create recognizer';
 
     # read tokens
     for my $i (0..@$tokens-1){
@@ -174,9 +171,10 @@ sub parse{
 #        say "# progress:", $recognizer->show_progress;
     }
     
-    # this needs to be $self->{o}->show
+    # TODO: this needs to be $self->{o}->show
 #    $self->{g}->show_option('recognition_failures');
     
+    # TODO: 'parse' needs to be split to 'recognize' and 'evaluate'
     # get values    
     my @values;
     my %values; # only unique parses will be returned
@@ -184,7 +182,7 @@ sub parse{
         my $value = $value_ref ? ${$value_ref} : 'No parse';
         # use dumper based on default_action
         my $value_dump = ref $value ? 
-            $self->{g}->{default_action} eq 'MarpaX::Parse::Tree::tree' ?
+            $self->{da} eq 'MarpaX::Parse::Tree::tree' ?
                 $self->{tree_package}->show_parse_tree($value, 'text') 
                 :
                 Dump $value
@@ -194,7 +192,7 @@ sub parse{
         next if exists $values{$value_dump};
         # save unique parses for return
         # prepend xml prolog and encode to utf8 if we need to return an XML string
-        if ($self->{g}->{default_action} eq 'MarpaX::Parse::Tree::xml'){
+        if ($self->{da} eq 'MarpaX::Parse::Tree::xml'){
             $value = '<?xml version="1.0"?>' . "\n" . $value;
             # enforce strict encoding (UTF-8 rather than utf8)
             $value = encode("UTF-8", $value);
@@ -236,44 +234,3 @@ sub show_parse_forest{
 
 1;
 __END__
-
-# grammar set up
-use Marpa::R2::Grammar;
-
-my $grammar = Marpa::R2::Grammar->new({
-    ...
-    default_action => 'tree'
-    ...
-});
-
-# parsing
-use MarpaX::Parser;
-
-#
-my $parser = MarpaX::Parser->new({
-    grammar => $grammar,
-});
-
-my $value = $p->parse($input);
-
-use MarpaX::Parse::Tree;
-
-# viewing/traversing
-
-
-use MarpaX::Parse::Tree::View;
-
-say $t->view;
-
-my $parser = MarpaX::Parse::Parser->new({
-    
-    grammar => Marpa::R2::Grammar->new({
-        ...
-        default_action => 'tree'
-        ...
-    }),
-
-})
-
-$p->parse($input) 
-
