@@ -20,7 +20,7 @@ sub new{
 
     # extract the grammar and the default action for it
     $self->{g}  = $options->{grammar} or die 'grammar required';
-    $self->{da} = $options->{default_action} || 'MarpaX::Parser::Tree::AoA';
+    $self->{da} = $options->{default_action};
     delete $options->{default_action};
     
     # default_action by, well, default
