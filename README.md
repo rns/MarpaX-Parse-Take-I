@@ -1,7 +1,7 @@
 MarpaX-Parse, MarpaX::Tools-to-be
 =================================
 
-Parts of this module will be refactored out into individual modules and probably distros as MarpaX::Tools::*, if [enough](http://blogs.perl.org/users/rns/2012/11/a-lexer-for-marpar2.html) [interest](http://blogs.perl.org/users/rns/2012/11/a-parser-for-marpar2.html) is seen.
+Parts of this module will be refactored out into individual modules and probably distros as MarpaX::Tools::*, if [enough](http://blogs.perl.org/users/rns/2012/11/a-lexer-for-marpar2.html) interest [is seen]](http://blogs.perl.org/users/rns/2012/11/a-parser-for-marpar2.html).
 
 What It Is
 ----------
