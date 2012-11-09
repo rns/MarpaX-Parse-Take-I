@@ -71,7 +71,7 @@ sub recognition_failure {
         events              => [ $recognizer->events ],
         exhausted           => $recognizer->exhausted,
         latest_earley_set   => $recognizer->latest_earley_set,
-        # TODO: stringify progress by converting IDs in to rules/symbols
+        # TODO: stringify progress by converting IDs into rules/symbols
         progress            => [ $recognizer->progress ],
         terminals_expected  => [ $recognizer->terminals_expected ],
     };
@@ -155,7 +155,6 @@ sub parse{
 
     # get closures for the recognizer from the grammar if we can
     my $grammar  = $self->{g};
-    say "grammar is ", ref $grammar;   
     # including descendants: (E)BNF 
     if (ref $grammar =~ /^MarpaX::Parse::Grammar/){
         say "setting closures";
