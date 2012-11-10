@@ -18,9 +18,9 @@ my $bnf_in_bnf = q{
 # before splitting on balanced
 
     # start rule
-    grammar    ::= production+
+    grammar    ::= production+ # yes, start rule
 
-    production ::= lhs '::=' rhs
+    production ::= lhs '::=' rhs # yes, start rule
     lhs        ::= symbol
     # this is comment above rhs -> rules production that should be deleted
     rhs        ::= rules
@@ -28,15 +28,16 @@ my $bnf_in_bnf = q{
             # this is action of rhs -> rules production that should not be deleted
             use 5.010; use YAML;
             my $rules = $_[1];
-            for my $rule ($rules){
+# comment            
+            for my $rule ($rules){ # comment
                 say "# rule:\n", Dump $rule; # print
             } ## for my $rule ($rules)
         %}
     
     # this is recursive rules+ production
     rules      ::= 
-        rule 
-            %{
+        rule # comment
+            %{ # comment
                 [ $_[1] ]                   # init separated rule sequence  
             %}
         | 
@@ -77,7 +78,7 @@ my $bnf_in_bnf = q{
 my $bnf = MarpaX::Parse->new({
     rules => $bnf_in_bnf,
     default_action => 'AoA',
-});
+}) or die "Can't create grammar: $@";
 
 isa_ok $bnf, 'MarpaX::Parse';
 
