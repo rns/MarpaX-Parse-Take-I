@@ -124,6 +124,7 @@ my $ebnf_rules = [
             # reinitialize subrules
             %{ $per_parse->{subrules} } = ();
             $per_parse->{subrule_no}    = 0;
+            $per_parse->{rule_no}++;
             
 #            say "# rules:\n", Dump $rules;
             $rules;
@@ -176,7 +177,8 @@ my $ebnf_rules = [
             
             # set up subrules
             my $subrules    = $per_parse->{subrules};
-            my $subrule_no  = $per_parse->{subrule_no};
+            my $subrule_no  = $per_parse->{subrule_no} || 0;
+            my $rule_no     = $per_parse->{rule_no} || 0;
             
             my $subrule = $_[1];
 
@@ -186,7 +188,7 @@ my $ebnf_rules = [
             my $action = $_[-1] if defined $_[-1] and index($_[-1], "%{", 0) == 0;
             
             # add subrule under provisional lhs with quantifier
-            my $prov_lhs = "__subrule" . $subrule_no++ . ($_[3] ? $_[3] : '');
+            my $prov_lhs = "__SR." . $rule_no . '.' . $subrule_no++ . ($_[3] ? $_[3] : '');
             $subrules->{$prov_lhs} = $subrule;
             
             # save subrule number and subrules

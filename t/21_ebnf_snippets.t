@@ -49,16 +49,29 @@ for my $data (
 EOT
 ],
 
-[ q{ s ::= x ( (',' x) | (','? conj x) )* }, <<EOT
-0: s -> x s__subrule2*
-1: s__subrule0 -> ',' x
-2: s__subrule1 -> ',' conj x
-3: s__subrule2 -> s__subrule0
-4: s__subrule2 -> s__subrule1
-5: s__subrule2* -> s__subrule2
-6: s__subrule2* -> s__subrule2* s__subrule2
-7: s__subrule2* -> /* empty !used */
-8: ',' -> /* empty !used */
+[ q{ 
+    sz ::= sx sy
+    sx ::= x ( (',' x) | (','? conj x) )* 
+    sy ::= y ( (',' y) | (','? conj y) )*
+}, <<EOT
+0: sz -> sx sy
+1: sx -> x sx__subrule1.2*
+2: sx__subrule1.0 -> ',' x
+3: sx__subrule1.1 -> ',' conj x
+4: sx__subrule1.2 -> sx__subrule1.0
+5: sx__subrule1.2 -> sx__subrule1.1
+6: sy -> y sy__subrule2.2*
+7: sy__subrule2.0 -> ',' y
+8: sy__subrule2.1 -> ',' conj y
+9: sy__subrule2.2 -> sy__subrule2.0
+10: sy__subrule2.2 -> sy__subrule2.1
+11: sx__subrule1.2* -> sx__subrule1.2
+12: sx__subrule1.2* -> sx__subrule1.2* sx__subrule1.2
+13: sy__subrule2.2* -> sy__subrule2.2
+14: sy__subrule2.2* -> sy__subrule2.2* sy__subrule2.2
+15: ',' -> /* empty !used */
+16: sy__subrule2.2* -> /* empty !used */
+17: sx__subrule1.2* -> /* empty !used */
 EOT
 ],
     
