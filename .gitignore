@@ -5,3 +5,5 @@ doc/
 pod/
 etc/
 *.bak
+t/_*.t
+
