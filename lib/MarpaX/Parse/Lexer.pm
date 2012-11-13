@@ -12,7 +12,7 @@ use YAML;
         [ $name, $value, $position ]
     ]
 =cut
-# TODO: pluggable lexer (Parse::Flex, etc.)
+# TODO: pluggable lexer (Parse::Lex, HOP::Lexer, App::Mowyw::Lexer etc.)
 
 sub new{
 
@@ -28,14 +28,14 @@ sub new{
 
 # lexer rules are derived from literal terminals, which can be 
 # strings or qr// patterns in single or double quotes
-sub _extract_lexer_rules
+sub _make_lexer_rules
 {
     my $self = shift;
     
     # TODO: _extract_terminals needs to be called rather than using terminals
     my $terminals = $self->_extract_terminals;
     
-#    say "# _extract_lexer_rules", Dump $terminals;
+#    say "# _make_lexer_rules", Dump $terminals;
 #    $self->show_option('rules');
 #    $self->show_option('symbols');
 #    $self->show_option('terminals');
@@ -69,8 +69,8 @@ sub lex
     
     my $input = shift;
 
-    # TODO: this needs to be $self->{g}->_extract_lexer_rules;
-    my $lex = shift || $self->_extract_lexer_rules;
+    # TODO: this needs to be $self->{g}->_make_lexer_rules;
+    my $lex = shift || $self->_make_lexer_rules;
 
 #    say "# lexer rules: ", Dump $lex;
 

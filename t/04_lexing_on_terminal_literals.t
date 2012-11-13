@@ -84,15 +84,15 @@ for my $test (
         grammar => $grammar, 
     } ) or die 'Failed to create recognizer';
     
-    # tokenize
+    # tokenize input
     my $tokens = $lexer->lex($number);
     
-    # read
+    # read tokens
     for my $token (@$tokens){
         defined $recognizer->read( @$token ) or die "Recognition failed";
     }
 
-    # evaluate
+    # evaluate the parse
     while ( defined( my $value_ref = $recognizer->value() ) ) {
         my $value = $value_ref ? ${$value_ref} : 'No parse';
         is Dumper($value), $expected, "$number lexed on literals and recognized";
