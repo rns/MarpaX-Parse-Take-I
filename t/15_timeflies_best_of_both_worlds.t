@@ -23,7 +23,7 @@ my $grammar = q{
     
     OBJT  ::= NP
     
-    NP    ::= DET? ADJC? NOUN
+    NP    ::= INAR? ADJC? NOUN
 
     VP    ::= VERB OBJT | VERB ADJN
     ADJN  ::= PP                  
@@ -40,8 +40,8 @@ my $pos = {
 
     ','     => [qw{ PUNC                                }],    # commas, periods, etc.
 
-    a       => [qw{      DET                            }],    # indefinite article
-    an      => [qw{      DET                            }],
+    a       => [qw{      INAR                            }],    # indefinite article
+    an      => [qw{      INAR                            }],
 
     arrow   => [qw{             ADJC    NOUN            }],    
     banana  => [qw{             ADJC    NOUN            }],
@@ -128,28 +128,28 @@ my $tree_type = 'sexpr';
 #
 # set up the grammar handling ambiguity with input model
 #
-my $mp_IM = MarpaX::Parse->new({
+my $mp = MarpaX::Parse->new({
     rules => $grammar . $token_rules,
     default_action => 'sexpr',
     ambiguity => 'input_model',
 }) or die "Can't create MarpaX::Parse: $@";
 
-#say $mp_IM->show_rules;
+#say $mp->show_rules;
 
-isa_ok $mp_IM, 'MarpaX::Parse';
+isa_ok $mp, 'MarpaX::Parse';
 
-my @input_model_parses = $mp_IM->parse( [ map { [ $_, $_ ] } grep { $_ } map { s/^\s+//; s/\s+$//; $_ } split /(\w+)/, $sentence ] );
+my @input_model_parses = $mp->parse( [ map { [ $_, $_ ] } grep { $_ } map { s/^\s+//; s/\s+$//; $_ } split /(\w+)/, $sentence ] );
 
 # expected
-my $expected_IM = <<EOT;
-(SENT (CLAU (NP (ADJC time) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJC fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET a) (NOUN banana))))))
-(SENT (CLAU (NP (ADJC time) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET a) (NOUN banana)))))))
-(SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJC fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (DET a) (NOUN banana))))))
-(SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (DET a) (NOUN banana)))))))
+my $expected = <<EOT;
+(SENT (CLAU (NP (ADJC time) (NOUN flies)) (VP (VERB like) (OBJT (NP (INAR an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJC fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (INAR a) (NOUN banana))))))
+(SENT (CLAU (NP (ADJC time) (NOUN flies)) (VP (VERB like) (OBJT (NP (INAR an) (NOUN arrow))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (INAR a) (NOUN banana)))))))
+(SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (INAR an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (ADJC fruit) (NOUN flies)) (VP (VERB like) (OBJT (NP (INAR a) (NOUN banana))))))
+(SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (INAR an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (INAR a) (NOUN banana)))))))
 EOT
 
 use MarpaX::Parse::Tree;
-my $t = MarpaX::Parse::Tree->new({ grammar => $mp_IM->grammar, type => $tree_type});
+my $t = MarpaX::Parse::Tree->new({ grammar => $mp->grammar, type => $tree_type});
 
 # stringify the parse trees
 my $trees = join("\n", map { $t->show_parse_tree($_) } sort @input_model_parses);
@@ -157,7 +157,7 @@ my $trees = join("\n", map { $t->show_parse_tree($_) } sort @input_model_parses)
 # test
 unless (
     is $trees . "\n", 
-    $expected_IM, 
+    $expected, 
     "parsed '$sentence'"
 ) {
     say $trees;
