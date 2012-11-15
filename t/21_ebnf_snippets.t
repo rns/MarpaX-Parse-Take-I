@@ -63,7 +63,7 @@ EOT
 8: , -> /* empty !used */
 EOT
 ],
-    
+
     ){
     my ($grammar, $rules, $input, $output) = @$data;
     
