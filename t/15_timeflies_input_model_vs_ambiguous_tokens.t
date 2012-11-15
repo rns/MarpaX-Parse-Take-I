@@ -7,6 +7,7 @@ use Test::More;
 use YAML;
 
 use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 #
 # This test case is borrowed from Jeffrey Kegler's Marpa::R2 distribution 
@@ -115,7 +116,7 @@ sub tokenize {
 # input
 my $sentence = 'time flies like an arrow, but fruit flies like a banana';
 
-my $tree_type = 'sexpr';
+my $tree_type = 'MarpaX::Parse::Tree::sexpr';
 #
 # set up the grammar handling ambiguity with input model
 #
@@ -149,10 +150,10 @@ my $expected_IM = <<EOT;
 EOT
 
 my $expected_AT = <<EOT;
-(S (C (NP (adjective (a time)) (noun (n flies))) (VP (V (v like)) (O (NP (article an) (noun (n arrow)))))) (comma ,) (conjunction but) (C (NP (adjective (a fruit)) (noun (n flies))) (VP (V (v like)) (O (NP (article a) (noun (n banana)))))))
-(S (C (NP (adjective (a time)) (noun (n flies))) (VP (V (v like)) (O (NP (article an) (noun (n arrow)))))) (comma ,) (conjunction but) (C (NP (noun (n fruit))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article a) (noun (n banana))))))))
-(S (C (NP (noun (n time))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article an) (noun (n arrow))))))) (comma ,) (conjunction but) (C (NP (adjective (a fruit)) (noun (n flies))) (VP (V (v like)) (O (NP (article a) (noun (n banana)))))))
-(S (C (NP (noun (n time))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article an) (noun (n arrow))))))) (comma ,) (conjunction but) (C (NP (noun (n fruit))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article a) (noun (n banana))))))))
+(S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
+(S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
+(S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
+(S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
 EOT
 
 use MarpaX::Parse::Tree;
@@ -161,12 +162,12 @@ my $t_IM = MarpaX::Parse::Tree->new({ grammar => $mp_IM->grammar, type => $tree_
 # tests
 is  join("\n", map { $t_IM->show_parse_tree($_) } sort @input_model_parses) . "\n", 
     $expected_IM, 
-    "ambiguous sentence ‘$sentence’ parsed using alternate()/earleme_complete() input model";
+    "ambiguous sentence '$sentence' parsed using alternate()/earleme_complete() input model";
 
 my $t_AT = MarpaX::Parse::Tree->new({ grammar => $mp_AT->grammar, type => $tree_type});
 
 is  join("\n", map { $t_AT->show_parse_tree($_) } sort @tokens_parses) . "\n", 
     $expected_AT, 
-    "ambiguous sentence ‘$sentence’ parsed using ambiguous tokens";
+    "ambiguous sentence '$sentence' parsed using ambiguous tokens";
 
 done_testing;

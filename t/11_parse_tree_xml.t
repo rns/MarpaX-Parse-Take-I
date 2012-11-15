@@ -2,10 +2,14 @@ use 5.010;
 use strict;
 use warnings;
 
-use YAML;
-use Test::More tests => 4;
+use Data::Dumper;
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
 
-use MarpaX::Parse;
+use Test::More tests => 6;
+
+use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 # set up grammar
 my $grammar = q{
@@ -23,7 +27,7 @@ my $grammar = q{
 
 my $bnf = MarpaX::Parse->new({
     rules => $grammar,
-    default_action => 'xml',
+    default_action => 'MarpaX::Parse::Tree::xml',
 });
 
 # input

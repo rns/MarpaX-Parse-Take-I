@@ -4,7 +4,9 @@ use warnings;
 
 use Test::More tests => 6;
 
-use YAML;
+use Data::Dumper;
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
 
 use_ok 'MarpaX::Parse';
 
@@ -30,13 +32,18 @@ BNF in BNF:
 
 my $bnf_in_bnf = q{
 
-    grammar    ::= production+
+# grammar starts here (comments starting at line beginning need to be deleted 
+# before splitting on balanced
+
+    # start rule
+    grammar    ::= production+  # this also tests comments removal
         %{
             # flatten array of arrays unless it has only one item
             return @{ $_[1] } > 1 ? [ map { @$_ } @{ $_[1] } ] : $_[1];
         %}
     production ::= lhs '::=' rhs
         %{
+            # this comment should not be deleted
             use Eval::Closure;
             
             my $lhs = $_[1];
@@ -61,7 +68,7 @@ my $bnf_in_bnf = q{
                     $rule->{action} = $closure;
                 }
                 push @$rules, $rule;
-            }
+            } 
             $rules;
         %}
     lhs        ::= symbol
@@ -117,9 +124,15 @@ my $bnf_in_bnf = q{
     
 };
 
+sub AoA { 
+    shift;
+    my @children = grep { defined } @_;
+    scalar @children > 1 ? \@children : shift @children;
+}
+
 my $bnf_bnf = MarpaX::Parse->new({
     rules => $bnf_in_bnf,
-    default_action => 'AoA',
+    default_action => __PACKAGE__ . '::AoA',
 });
 
 isa_ok $bnf_bnf, 'MarpaX::Parse';
@@ -137,34 +150,24 @@ my $decimal_number_rules = $bnf_bnf->parse($decimal_numbers_grammar);
 # set up decimal number bnf
 my $decimal_number_bnf = MarpaX::Parse->new({
     rules => $decimal_number_rules,
-    default_action => 'xml',
+    default_action => __PACKAGE__ . '::AoA',
 });
 
 # test decimal number bnf
-my $numbers = [
-    '1234',
-    '-1234.423',
-    '-1234',
-    '1234.423',
+my $tests = [
+    [   '1234',     "['1',['2',['3','4']]]" ],
+    [ '-1234.423',  "['-',[['1',['2',['3','4']]],'.',['4',['2','3']]]]" ],
+    [ '-1234',      "['-',['1',['2',['3','4']]]]" ],
+    [  '1234.423',  "[['1',['2',['3','4']]],'.',['4',['2','3']]]" ],
 ];
 
 use XML::Twig;
 
-for my $number (@$numbers){
+for my $test (@$tests){
 
-    # parse tree is in XML string (default_action => 'xml')
-    my $xml = $decimal_number_bnf->parse($number);
+    my ($number, $digits) = @$test;
 
-    # setup XML parse tree
-    my $t = XML::Twig->new;
-    $t->parse($xml);
+    my $value = $decimal_number_bnf->parse($number);
 
-=item
-    Each parse tree represents a string of terminals s, which we call Yield of a tree the yield of the tree. The string s consists of the labels of the leaves of the tree, in left-to-right order. — http://i.stanford.edu/~ullman/focs/ch11.pdf
-=cut
-    my $deparsed_number = $t->root->text;
-
-    # test
-    is $deparsed_number, $number, "numeral $number lexed and parsed with BNF";
-
+    is Dumper($value), $digits, "numeral $number lexed and parsed with BNF";
 }

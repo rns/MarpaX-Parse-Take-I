@@ -4,7 +4,9 @@ use warnings;
 
 use Test::More;
 
-use YAML;
+use Data::Dumper;
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
 
 use MarpaX::Parse;
 
@@ -384,25 +386,25 @@ my $rules = [
     [ one_or_more_3_tail => [qw(item1+ item2+ item3+ tail3)] ],
 ];
 
+sub AoA { 
+    shift;
+    my @children = grep { defined } @_;
+    scalar @children > 1 ? \@children : shift @children;
+}
+
 my $me = MarpaX::Parse->new({ 
     rules => $rules,
-    default_action => 'AoA',
+    default_action => __PACKAGE__ . '::AoA',
     nullables_for_quantifiers => 0,
 });
-
-say $me->grammar->show_rules();
 
 for my $input (@$inputs){
     my $input_str = join ' ', map { $_->[0] } @$input;
     my $value = $me->parse($input);
-    unless (
-        is 
-            join(' ', map { ref $_ eq "ARRAY" ? join ' ', @$_ : $_ } ref $value eq "ARRAY" ? @$value : $value ), 
-            $input_str,
-            "<$input_str> parsed with quantifiers in rules"
-        ){
-        say "# value: ", Dump $value;
-    }
+    is 
+        join(' ', map { ref $_ eq "ARRAY" ? join ' ', @$_ : $_ } ref $value eq "ARRAY" ? @$value : $value ), 
+        $input_str,
+        "<$input_str> parsed with quantifiers in rules"
 }
     
 done_testing;

@@ -2,11 +2,12 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 use YAML;
 
 use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 my $grammar = q{
 
@@ -18,7 +19,7 @@ my $grammar = q{
 
 my $ebnf = MarpaX::Parse->new({
     rules => $grammar,
-    default_action => 'xml',
+    default_action => 'MarpaX::Parse::Tree::xml',
 }) or die "Can't create MarpaX::Parse: $@";
 
 isa_ok $ebnf, 'MarpaX::Parse';

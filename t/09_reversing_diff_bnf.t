@@ -4,7 +4,9 @@ use warnings;
 
 use Test::More tests => 1;
 
-use YAML;
+use Data::Dumper;
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
 
 use MarpaX::Parse;
 
@@ -79,9 +81,15 @@ my $reversed_diff = q{16a17,18
 < All rights reserved.
 };
 
+sub AoA { 
+    shift;
+    my @children = grep { defined } @_;
+    scalar @children > 1 ? \@children : shift @children;
+}
+
 my $me = MarpaX::Parse->new({
     rules => $grammar,
-    default_action => 'AoA',
+    default_action => __PACKAGE__ . '::AoA',
 });
 
 my $value = $me->parse($diff);

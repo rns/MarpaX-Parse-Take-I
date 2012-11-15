@@ -7,6 +7,7 @@ use Test::More;
 use YAML;
 
 use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 # every actionable symbol will be handled as array of arrays
 # so that the same tests shall pas for both grammars
@@ -100,7 +101,7 @@ my $AoA_with_default_action = q{
 # set up no-actions grammar
 my $ebnf = MarpaX::Parse->new({
     rules => $AoA_with_default_action,
-    default_action => 'AoA',
+    default_action => 'MarpaX::Parse::Tree::AoA',
     quantifier_rules => 'recursive',
     nullables_for_quantifiers => 1,
 }) or die "Can't create grammar: $@";
@@ -162,7 +163,7 @@ for my $test (@$tests){
 #
 $ebnf = MarpaX::Parse->new({
     rules => $AoA_with_embedded_actions,
-    default_action => 'AoA',
+    default_action => 'MarpaX::Parse::Tree::AoA',
     quantifier_rules => 'recursive',
     nullables_for_quantifiers => 1,
 }) or die "Can't create grammar: $@";

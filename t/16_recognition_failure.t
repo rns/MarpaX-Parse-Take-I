@@ -6,7 +6,8 @@ use YAML;
 
 use Test::More;
 
-use MarpaX::Parse;
+use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 # grammar
 my $grammar = q{
@@ -27,7 +28,7 @@ my $number = '-1234.423';
 # set up the grammar
 my $mp = MarpaX::Parse->new({
     rules => $grammar,
-    default_action => 'sexpr',
+    default_action => 'MarpaX::Parse::Tree::sexpr',
 });
 
 $mp->parse($number);
@@ -51,12 +52,12 @@ my $mp1 = MarpaX::Parse->new({
         Op          ::= '+'
         Number      ::= 'qr/\d+/'
     },
-    default_action => 'tree',
+    default_action => 'MarpaX::Parse::Tree::tree',
     show_recognition_failures => 1,
 });
 
 my $tree = $mp1->parse('1+2+1');
 
-say $mp1->show_parse_tree;
+say MarpaX::Parse::Tree->new({ type => 'tree' })->show_parse_tree($tree);
 
 done_testing;

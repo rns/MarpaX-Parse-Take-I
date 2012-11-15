@@ -8,7 +8,8 @@ use Test::More;
 
 use Test::Differences;
 
-use MarpaX::Parse;
+use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 # grammar
 my $calc = q{
@@ -27,15 +28,17 @@ my $calc = q{
     
 };
 
+my $tree_type = 'sexpr';
+
 # set up the grammar
 my $mp = MarpaX::Parse->new({
     rules => $calc,
-    default_action => 'sexpr',
+    default_action => "MarpaX::Parse::Tree::$tree_type",
 });
 
 my @trees = $mp->parse('1 + 1');
 
-eq_or_diff_text $mp->show_parse_tree . "\n", <<EOT, "multiple parse trees shown";
+eq_or_diff_text MarpaX::Parse::Tree->new({ type => $tree_type })->show_parse_forest(\@trees) . "\n", <<EOT, "multiple parse trees shown";
 # Parse Tree 1:
 (Expression (Term (Factor+ (Factor (Identifier 1)))) (Op +) (Term (Factor+ (Factor (Identifier 1)))))
 # Parse Tree 2:

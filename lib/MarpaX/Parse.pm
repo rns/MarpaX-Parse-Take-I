@@ -124,9 +124,16 @@ sub new{
     $self->{g} = $grammar;
     
     # set up parser
-    $recognizer_options->{grammar}        = $grammar->grammar;
-    $recognizer_options->{default_action} = $grammar->{default_action};
+    # we set the grammar we have whence MarpaX::Tool::Parser will get
+    # Marpa::R2::Grammar it needs for the recognizer
+    $recognizer_options->{grammar}        = $grammar;
+    # TODO: set default_action to grammar and get it in MarpaX::Tool::Parser
+    #       this needs an accessor for default_action in Marpa::R2::Grammar
+    # MarpaX::Tool::Parser needs to know default_action for parse tree dumping
+    $recognizer_options->{default_action} = $grammar_options->{default_action};
+    # closures is the argument of Marpa::R2::Recognizer 
     $recognizer_options->{closures}       = $grammar->{closures};
+
     $self->{p} = MarpaX::Parse::Parser->new($recognizer_options);
     
     bless $self, $class;
@@ -143,7 +150,7 @@ sub show_rules{
 # accessors
 # =========
 
-sub grammar { $_[0]->{g}->grammar }
+sub grammar { $_[0]->{g} }
 
 sub parse {
 

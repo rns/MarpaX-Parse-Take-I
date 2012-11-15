@@ -4,7 +4,10 @@ use warnings;
 
 use Test::More tests => 6;
 
-use YAML;
+use Data::Dumper;
+
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
 
 use_ok 'MarpaX::Parse';
 
@@ -49,9 +52,15 @@ my $grammar = q{
     
 };
 
+sub AoA { 
+    shift;
+    my @children = grep { defined } @_;
+    scalar @children > 1 ? \@children : shift @children;
+}
+
 my $bnf = MarpaX::Parse->new({
     rules => $grammar,
-    default_action => 'AoA',
+    default_action => __PACKAGE__ . '::AoA',
 }) or die "Can't create MarpaX::Parse: $@";
 
 isa_ok $bnf, 'MarpaX::Parse';

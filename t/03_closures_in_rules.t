@@ -2,10 +2,9 @@ use 5.010;
 use strict;
 use warnings;
 
-use YAML;
 use Test::More tests => 5;
 
-use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Grammar';
 
 # The below is BNF for decimal numbers, no literals
 #
@@ -14,7 +13,7 @@ use_ok 'MarpaX::Parse';
 #    digits  ::= digit | digits digit
 #    digit   ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 
-my $with_closures = MarpaX::Parse->new({   
+my $with_closures = MarpaX::Parse::Grammar->new({   
     rules   => [
         [ expr => [qw(- num)], sub { $_[1] . $_[2] } ],
         [ expr => [qw(num)],   sub { $_[1] } ],
@@ -51,46 +50,86 @@ my $with_closures = MarpaX::Parse->new({
         [ digit => [qw(8)], sub { $_[1] } ], 
         [ digit => [qw(9)], sub { $_[1] } ],
     ],
-    default_action => 'AoA'
+    default_action => __PACKAGE__ . '::do_what_I_mean'
 });
 
-my $numbers = [
+sub do_what_I_mean { 
+    shift;
+    my @values = grep { defined } @_;
+    scalar @values > 1 ? \@values : shift @values;
+}
+
+my $tests = [
+
     [
-        [ '1', '1' ],
-        [ '2', '2' ],
-        [ '3', '3' ],
-        [ '4', '4' ],
-    ],
+        [
+            [ '1', '1' ],
+            [ '2', '2' ],
+            [ '3', '3' ],
+            [ '4', '4' ],
+        ],
+        '1234'
+    ],    
+
     [
-        [ '-', '-' ],
-        [ '1', '1' ],
-        [ '2', '2' ],
-        [ '3', '3' ],
-        [ '4', '4' ],
-        [ '.', '.' ],
-        [ '4', '4' ],
-        [ '2', '2' ],
-        [ '3', '3' ],
-    ],
+        [
+            [ '-', '-' ],
+            [ '1', '1' ],
+            [ '2', '2' ],
+            [ '3', '3' ],
+            [ '4', '4' ],
+            [ '.', '.' ],
+            [ '4', '4' ],
+            [ '2', '2' ],
+            [ '3', '3' ],
+        ],
+        '-1234.423'
+    ],    
+
     [
-        [ '-', '-' ],
-        [ '1', '1' ],
-        [ '2', '2' ],
-        [ '3', '3' ],
-    ],
+        [
+            [ '-', '-' ],
+            [ '1', '1' ],
+            [ '2', '2' ],
+            [ '3', '3' ],
+        ],
+        '-123'
+    ],    
+
     [
-        [ '1', '1' ],
-        [ '2', '2' ],
-        [ '3', '3' ],
-        [ '4', '4' ],
-        [ '.', '.' ],
-        [ '4', '4' ],
-        [ '3', '3' ],
-    ]
+        [
+            [ '1', '1' ],
+            [ '2', '2' ],
+            [ '3', '3' ],
+            [ '4', '4' ],
+            [ '.', '.' ],
+            [ '4', '4' ],
+            [ '3', '3' ],
+        ],
+        '1234.43'
+    ],    
 ];
 
-for my $number (@$numbers){
-    my $value = $with_closures->parse($number);
-    my $expected = ref $number eq "ARRAY" ? join('', map { $_->[1] } @$number) : $number;
-    is $value, $expected, "decimal number $expected parsed with closures in rules";
+for my $test (@$tests){
+    
+    my ($number, $digits) = @$test;
+    
+    # setup the recognizer
+    my $recognizer = Marpa::R2::Recognizer->new( { 
+        grammar => $with_closures->grammar, 
+        closures => $with_closures->closures, 
+    } ) or die 'Failed to create recognizer';
+
+    # read tokens
+    for my $token (@$number){
+        defined $recognizer->read( @$token ) or die "Recognition failed";
+    }
+
+    # evaluate the parse
+    while ( defined( my $value_ref = $recognizer->value() ) ) {
+        my $value = $value_ref ? ${$value_ref} : 'No parse';
+        
+        is $value, $digits, "decimal number '$value' parsed into digits and evaluated with closures in rules";
+    }
+
 }

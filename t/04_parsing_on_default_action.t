@@ -4,6 +4,10 @@ use warnings;
 
 use Test::More;
 
+use Data::Dumper;
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
+
 use Marpa::R2;
 
 use MarpaX::Parse::Parser;
@@ -42,7 +46,7 @@ my $grammar = Marpa::R2::Grammar->new({
         [ digit => [qw('8')] ], 
         [ digit => [qw('9')] ],
     ],
-    actions => __PACKAGE__,
+    default_action => __PACKAGE__ . '::do_what_I_mean',
 });
 
 $grammar->precompute();
@@ -61,14 +65,6 @@ eval {
 like $@, qr/^grammar required/, "lack of grammar detected";
 is ($parser, undef, "constructor returned undef");
 
-#
-# The Dumper
-#
-use Data::Dumper;
-
-$Data::Dumper::Terse = 1;
-$Data::Dumper::Indent = 0;
- 
 #
 # The Test
 #

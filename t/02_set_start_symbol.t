@@ -2,10 +2,9 @@ use 5.010;
 use strict;
 use warnings;
 
-use YAML;
-use Test::More tests => 3;
+use Test::More tests => 2;
 
-use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Grammar';
 
 # The below is BNF for decimal numbers, no literals
 #
@@ -39,9 +38,15 @@ my $rules = [
 
 ];
 
-my $m = MarpaX::Parse->new({ 
+sub do_what_I_mean { 
+    shift;
+    my @values = grep { defined } @_;
+    scalar @values > 1 ? \@values : shift @values;
+}
+
+my $g = MarpaX::Parse::Grammar->new({ 
     rules => $rules,
-    default_action => 'AoA_with_rule_signatures',
+    default_action => __PACKAGE__ . '::do_what_I_mean',
 });
 
 # set up test data
@@ -52,48 +57,28 @@ my $number = [
     [ '4', '4' ],
 ];
 
-# parse
-my $value = $m->parse($number);
+# setup the recognizer
+my $recognizer = Marpa::R2::Recognizer->new( { 
+    grammar => $g->grammar, 
+} ) or die 'Failed to create recognizer';
 
-is_deeply $value, Load(<<END_OF_PARSE), "numeral parsed with start symbol and default action AoA_with_rule_signatures";
----
-- expr -> num
--
-  - num -> digits
-  -
-    - digits -> digits digit
-    -
-      -
-        - digits -> digits digit
-        -
-          -
-            - digits -> digits digit
-            -
-              -
-                - digits -> digit
-                -
-                  - digit -> 1
-                  - 1
-              -
-                - digit -> 2
-                - 2
-          -
-            - digit -> 3
-            - 3
-      -
-        - digit -> 4
-        - 4
-END_OF_PARSE
+# read tokens
+for my $token (@$number){
+    defined $recognizer->read( @$token ) or die "Recognition failed";
+}
 
-my $m1 = MarpaX::Parse->new({ rules => $rules, default_action => 'AoA' });
-$value = $m1->parse($number);
+#
+# The Dumper
+#
+use Data::Dumper;
 
-is_deeply $value, Load(<<END_OF_PARSE), "numeral parsed with start symbol set automagically and default action AoA specified";
----
--
-  -
-    - 1
-    - 2
-  - 3
-- 4
-END_OF_PARSE
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
+
+# evaluate the parse
+while ( defined( my $value_ref = $recognizer->value() ) ) {
+    my $value = $value_ref ? ${$value_ref} : 'No parse';
+    is Dumper($value), "[[['1','2'],'3'],'4']", "decimal number recognized with start symbol set by the tool";
+}
+
+

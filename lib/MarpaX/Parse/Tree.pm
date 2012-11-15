@@ -254,16 +254,18 @@ sub xml {
 
 sub show_parse_forest{
     my $self = shift;
+    my $parse_forest = shift or die "parse forest required";
+    die "parse forest needs to be an array reference; $parse_forest is passed instead" unless ref $parse_forest eq "ARRAY";
     my $format = shift || 'text';
 
     # POSSIBLE TODO: use start symbol to denote parse trees, if we extracted one
     my $header = 'Parse Tree'; # another use case for start() accessor of Marpa::R2::Grammar
 
     my $forest = '';
-    for my $i (0..@{$self->{parse_forest}}-1){
+    for my $i (0..@$parse_forest-1){
         $forest .= join '',
             "# $header ", $i + 1, ":\n" ,
-            $self->show_parse_tree($self->{parse_forest}->[$i], $format) , 
+            $self->show_parse_tree($parse_forest->[$i], $format) , 
             "\n";
     }
     chomp $forest;
@@ -272,7 +274,7 @@ sub show_parse_forest{
 
 sub show_parse_tree{
     my $self = shift;
-    my $tree = shift || $self->{parse_tree};
+    my $tree = shift or die "parse tree required";
     my $format = shift || 'text';
     
 #    say Dump $tree;

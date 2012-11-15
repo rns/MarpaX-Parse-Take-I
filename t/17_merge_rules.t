@@ -6,7 +6,8 @@ use YAML;
 
 use Test::More;
 
-use MarpaX::Parse;
+use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 # grammar
 # these rules will be added first
@@ -32,7 +33,7 @@ my $number = '-1234.423';
 # set up the grammar
 my $mt = MarpaX::Parse->new({
     rules => $non_terminals,
-    default_action => 'sexpr',
+    default_action => 'MarpaX::Parse::Tree::sexpr',
 });
 
 eval { $mt->parse($number) }; 

@@ -2,7 +2,6 @@ use 5.010;
 use strict;
 use warnings;
 
-use YAML;
 use Test::More tests => 2;
 
 use MarpaX::Parse;
@@ -64,7 +63,7 @@ my $number = [
 # setup recognizer
 my $recognizer =
     Marpa::R2::Recognizer->new( { 
-        grammar => $mt->grammar, 
+        grammar => $mt->grammar->grammar, 
     } );
 die 'Failed to create recognizer' if not $recognizer;
 
@@ -79,32 +78,20 @@ while ( defined( my $value_ref = $recognizer->value() ) ) {
     $value = $value_ref ? ${$value_ref} : 'No parse';
 }
 
-is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with MarpaX::Parse and Marpa::R2::Recognizer";
----
--
-  -
-    - 1
-    - 2
-  - 3
-- 4
-END_OF_PARSE
+use Data::Dumper;
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
+
+is Dumper($value), "[[['1','2'],'3'],'4']", , "decimal integer parsed with MarpaX::Parse and Marpa::R2::Recognizer";
 
 #
 # The same can be done with parse method of MarpaX::Parse.
-# The default action AoA (array of arrays) will be set by MarpaX::Parse.
 #
-my $mt_AoA = MarpaX::Parse->new({
-    rules => $rules
+$mt = MarpaX::Parse->new({
+    rules => $rules,
+    default_action => __PACKAGE__ . '::do_what_I_mean',
 }) or die "Failed to create MarpaX::Parse: $@";
 
-$value = $mt_AoA->parse($number);
+$value = $mt->parse($number);
 
-is_deeply $value, Load(<<END_OF_PARSE), "decimal integer parsed with MarpaX::Parse::parse";
----
--
-  -
-    - 1
-    - 2
-  - 3
-- 4
-END_OF_PARSE
+is Dumper($value), "[[['1','2'],'3'],'4']", "decimal integer parsed with MarpaX::Parse::parse";

@@ -1,67 +1,81 @@
+use 5.010;
 use strict;
 use warnings;
 
 use Test::More tests => 1;
 
-use YAML;
+use Data::Dumper;
 
-use 5.010;
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 0;
+
 use MarpaX::Parse;
 
-# this silences "Possible attempt to separate words with commas", among others
-no warnings;
+# grammar setup
+my $rules;
+{
+    no warnings qw{qw}; # silence "Possible attempt to separate words with commas"
+    $rules = [
 
-my $rules = [
+        [ DiffOutput => [qw( 
+                Command+
+          )], 
+          sub {
+                join '', @{ $_[1] };
+          }
+        ],
 
-    [ DiffOutput => [qw( 
-            Command+
-      )], 
-      sub {
-            join '', @{ $_[1] };
-      }
-    ],
+        [ Command    => [qw(
+                LineNum 'a' LineRange RightLine+
+          )],
+          sub { 
+                "$_[3]d$_[1]\n" . join '', map {s/>/</; $_} @{ $_[4] }
+          }
+        ],  
+        [ Command    => [qw( 
+                LineRange 'd' LineNum LeftLine+
+          )],
+          sub { 
+                "$_[3]a$_[1]\n" . join '', map {s/</>/; $_} @{ $_[4] }
+          }
+        ],  
+        [ Command    => [qw( 
+                LineRange 'c' LineRange LeftLine+ 'qr/---\n/' RightLine+
+          )],
+          sub {
+                "$_[3]c$_[1]\n" .
+                join( '', map {s/>/</; $_} @{ $_[6] } ) . 
+                "$_[5]" .
+                join( '', map {s/</>/; $_} @{ $_[4] } )
+          }  
+        ],  
 
-    [ Command    => [qw(
-            LineNum 'a' LineRange RightLine+
-      )],
-      sub { 
-            "$_[3]d$_[1]\n" . join '', map {s/>/</; $_} @{ $_[4] }
-      }
-    ],  
-    [ Command    => [qw( 
-            LineRange 'd' LineNum LeftLine+
-      )],
-      sub { 
-            "$_[3]a$_[1]\n" . join '', map {s/</>/; $_} @{ $_[4] }
-      }
-    ],  
-    [ Command    => [qw( 
-            LineRange 'c' LineRange LeftLine+ 'qr/---\n/' RightLine+
-      )],
-      sub {
-            "$_[3]c$_[1]\n" .
-            join( '', map {s/>/</; $_} @{ $_[6] } ) . 
-            "$_[5]" .
-            join( '', map {s/</>/; $_} @{ $_[4] } )
-      }  
-    ],  
-        
-    [ LineRange  => [qw( 
-            LineNum ',' LineNum
-      )],
-      sub { 
-            join '', @_[1..3]
-      }
-    ],  
-    [ LineRange  => [qw( LineNum        )] ],
-        
-    [ LineNum    => [qw( 'qr/\d+/'      )] ],
-    [ LeftLine   => [qw( 'qr/<.*\n/'    )] ],
-    [ RightLine  => [qw( 'qr/>.*\n/'    )] ],
+        [ LineRange  => [qw( 
+                LineNum ',' LineNum
+          )],
+          sub { 
+                join '', @_[1..3]
+          }
+        ],  
+        [ LineRange  => [qw( LineNum        )] ],
 
-];
+        [ LineNum    => [qw( 'qr/\d+/'      )] ],
+        [ LeftLine   => [qw( 'qr/<.*\n/'    )] ],
+        [ RightLine  => [qw( 'qr/>.*\n/'    )] ],
 
-use warnings;
+    ];
+}
+
+sub AoA { 
+    shift;
+    my @children = grep { defined } @_;
+    scalar @children > 1 ? \@children : shift @children;
+}
+
+my $me = MarpaX::Parse->new({
+    rules => $rules,
+    default_action => __PACKAGE__ . '::AoA',
+});
 
 # input
 my $diff = q{
@@ -93,11 +107,6 @@ my $reversed_diff = q{16a17,18
 < Copyright (c) 1998, The Perl Journal.
 < All rights reserved.
 };
-
-my $me = MarpaX::Parse->new({
-    rules => $rules,
-    default_action => 'AoA',
-});
 
 my $value = $me->parse($diff);
 

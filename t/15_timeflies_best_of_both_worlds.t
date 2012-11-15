@@ -7,6 +7,7 @@ use Test::More;
 use YAML;
 
 use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 #
 # This test case is borrowed from Jeffrey Kegler's Marpa::R2 distribution 
@@ -130,7 +131,7 @@ my $tree_type = 'sexpr';
 #
 my $mp = MarpaX::Parse->new({
     rules => $grammar . $token_rules,
-    default_action => 'sexpr',
+    default_action => 'MarpaX::Parse::Tree::sexpr',
     ambiguity => 'input_model',
 }) or die "Can't create MarpaX::Parse: $@";
 
@@ -148,7 +149,6 @@ my $expected = <<EOT;
 (SENT (CLAU (NP (NOUN time)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (INAR an) (NOUN arrow)))))) (PUNC ,) (CONJ but) (CLAU (NP (NOUN fruit)) (VP (VERB flies) (ADJN (PP (PREP like) (NP (INAR a) (NOUN banana)))))))
 EOT
 
-use MarpaX::Parse::Tree;
 my $t = MarpaX::Parse::Tree->new({ grammar => $mp->grammar, type => $tree_type});
 
 # stringify the parse trees

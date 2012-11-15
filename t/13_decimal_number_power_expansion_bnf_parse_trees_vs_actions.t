@@ -10,6 +10,7 @@ use XML::Twig;
 use Tree::Simple;
 
 use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 my $grammar = q{
 
@@ -260,7 +261,7 @@ for my $tree_type (sort keys %$tree_traversers){
     # set up grammar
     my $mp = MarpaX::Parse->new({ # Marpa::Parser
         rules           => $tree_type eq "actions" ? $grammar_with_actions : $grammar,
-        default_action  => $tree_type eq "actions" ? undef : $tree_type,
+        default_action  => $tree_type eq "actions" ? undef : "MarpaX::Parse::Tree::$tree_type",
     });
     
     # test on number

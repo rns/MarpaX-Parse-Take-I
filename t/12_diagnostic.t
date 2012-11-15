@@ -7,7 +7,8 @@ use Test::More;
 
 use Test::Output;
 
-use MarpaX::Parse;
+use_ok 'MarpaX::Parse';
+use_ok 'MarpaX::Parse::Tree';
 
 # grammar
 my $grammar = q{
@@ -19,7 +20,7 @@ my $grammar = q{
 
 my $bnf = MarpaX::Parse->new({
     rules => $grammar,
-    default_action => 'sexpr',
+    default_action => 'MarpaX::Parse::Tree::sexpr',
 });
 
 # input
@@ -40,9 +41,10 @@ my $number_tokens = [
 # parse
 my $sexpr = $bnf->parse($number);
 
-unless (is $sexpr, '(expr - (num (digits (digit 1) (digits (digit 2) (digits (digit 3) (digits (digit 4))))) . (digits (digit 4) (digits (digit 2) (digits (digit 3))))))', "$number parsed"){
-    say $sexpr;
-}
+is $sexpr, '(expr - (num (digits (digit 1) (digits (digit 2) (digits (digit 3) (digits (digit 4))))) . (digits (digit 4) (digits (digit 2) (digits (digit 3))))))', "$number parsed";
+
+SKIP: {
+             skip "unimplemented", 10;
 
 # get the expected output by setting options and calling option methods directly
 for my $data (
@@ -262,5 +264,7 @@ literal: '9'} ],
     stdout_is { $mp->parse($number) } "$comment\n$expected\n", "diagnostic printed by setting $option => 1 in the constructor";
     is $mp->$option, $expected, "diagnostic returned by calling $option directly";
 }
+
+} ## SKIP
 
 done_testing;

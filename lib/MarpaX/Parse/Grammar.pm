@@ -105,9 +105,6 @@ sub build {
     # extract closures and generate actions for Recognizer
     $self->{closures} = $self->_closures_to_actions( \@rules );
 
-    # handle default action
-    $self->_set_default_action($options);    
-
     # set start to lhs of the first rule if not set
     if (not exists $options->{start}){
         $options->{start} = $self->_extract_start_symbol( \@rules );
@@ -130,7 +127,8 @@ sub build {
     $self->set_option('rules', $grammar->show_rules);
 }
 
-sub grammar { $_[0]->{grammar} }
+sub grammar  { $_[0]->{grammar} }
+sub closures { $_[0]->{closures} }
 
 #
 # get current options (as-passed), get rules from them, merge new rules, 
@@ -160,29 +158,11 @@ sub merge_token_rules {
     $self->build($options);
 }
 
+# the default action needs to be set in the constructor's arguments
+
 # 
 # rule transform methods
 #
-
-sub _set_default_action
-{
-    my $self = shift;
-    
-    my $options = shift;
-    
-    # if default action exists in MarpaX::Parse::Tree package then use it
-    my $da = $options->{default_action};
-    if (defined $da){
-        if (exists $MarpaX::Parse::Tree::{$da}){
-            $options->{default_action} = 'MarpaX::Parse::Tree::' . $da;
-        }
-    }
-    # otherwise set default action which prints the rules and their contents
-    else{
-        $options->{default_action} = 'MarpaX::Parse::Tree::' . 'AoA';
-    }
-    $self->{default_action} = $options->{default_action};
-}
 
 sub _rule_signature
 {

@@ -74,9 +74,15 @@ my $rules = [
     } ],
 ];
 
+sub AoA { 
+    shift;
+    my @children = grep { defined } @_;
+    scalar @children > 1 ? \@children : shift @children;
+}
+
 my $me = MarpaX::Parse->new({ 
     rules => $rules,
-    default_action => 'AoA',
+    default_action => __PACKAGE__ . '::AoA',
     quantifier_rules => 'recursive',
     nullables_for_quantifiers => 0,
 });
