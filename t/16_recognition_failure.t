@@ -33,9 +33,9 @@ my $mp = MarpaX::Parse->new({
 
 $mp->parse($number);
 
-TODO: {
+SKIP: {
 
-todo_skip "No grammar/input devised to test recognition failures yet", 1;
+skip "No grammar/input devised to test recognition failures yet", 1;
 
 my $expected_recognition_failures = <<EOT;
 EOT

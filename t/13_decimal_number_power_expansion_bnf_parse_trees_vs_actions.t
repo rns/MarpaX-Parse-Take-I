@@ -129,10 +129,10 @@ sub traverse_HoA{
 
     my $tree = shift;
     
-    say Dump;
+    say Dump $tree;
     
     my (@int, @frac, $neg);
-
+=pod
     # positive integer or float
     if (ref $tree->{expr} eq "HASH"){
         # positive integer
@@ -158,7 +158,7 @@ sub traverse_HoA{
         @frac = ();
         $neg  = 1;
     }
-
+=cut
     return [ \@int, \@frac, $neg ]
 }
 
@@ -168,11 +168,13 @@ sub traverse_HoA{
 sub traverse_HoH{
 
     my $tree = shift;
-
-    my @int = @{ $tree->{expr}->{num}->{integer}->{'digit+'}->{digit} };
-    my @frac = exists $tree->{expr}->{num}->{fractional} ? @{ $tree->{expr}->{num}->{fractional}->{'digit+'}->{digit} } : ();
-    my $neg = $tree->{expr}->{minus};
-
+    
+    my (@int, @frac, $neg);
+=pod    
+    @int = @{ $tree->{expr}->{num}->{integer}->{'digit+'}->{digit} };
+    @frac = exists $tree->{expr}->{num}->{fractional} ? @{ $tree->{expr}->{num}->{fractional}->{'digit+'}->{digit} } : ();
+    $neg = $tree->{expr}->{minus};
+=cut
     return [ \@int, \@frac, $neg ]
 }
 
@@ -262,6 +264,8 @@ for my $tree_type (sort keys %$tree_traversers){
     my $mp = MarpaX::Parse->new({ # Marpa::Parser
         rules           => $tree_type eq "actions" ? $grammar_with_actions : $grammar,
         default_action  => $tree_type eq "actions" ? undef : "MarpaX::Parse::Tree::$tree_type",
+        # otherwise optional (? and *) will be present as undefs
+        nullables_for_quantifiers => 0,
     });
     
     # test on number
@@ -299,7 +303,7 @@ for my $tree_type (sort keys %$tree_traversers){
 
         unless (is $got_series, $expected_series, "$number expanded to power series via BNF grammar with $tree_type parse tree"){
             diag "parse tree: $tree_type";
-            diag $mp->show_parse_tree;
+            diag MarpaX::Parse::Tree->new({ type => $tree_type })->show_parse_tree($tree);
         }
             
     } ## number_and_series 
