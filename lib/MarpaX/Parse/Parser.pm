@@ -95,12 +95,12 @@ sub parse{
     my $recce_opts = $self->{ro};
     
     # get Marpa::R2::Grammar
-    my $grammar  = ref $self->{g} eq "Marpa::R2::Grammar" ? $self->{g} : $self->{g}->grammar;
+    my $Marpa_grammar  = ref $self->{g} eq "Marpa::R2::Grammar" ? $self->{g} : $self->{g}->grammar;
 
     # closures for the recognizer need to be pre-set in options
     
     # set grammar
-    $recce_opts->{grammar}  = $grammar;
+    $recce_opts->{grammar}  = $Marpa_grammar;
 
     # init recognition failures
     $self->{recognition_failures} = [];
@@ -112,7 +112,7 @@ sub parse{
         $tokens = $input;
         # TODO: grammar data can be shown here for tracing
         # find ambiguous tokens and disambiguate them by adding rules to the grammar
-        if ($self->{ambiguity} eq 'tokens' and $grammar->isa('MarpaX::Parse::Grammar')){
+        if ($self->{ambiguity} eq 'tokens' and $self->{g}->isa('MarpaX::Parse::Grammar')){
             # rules for the ambiguous token must be unique
             my $ambiguous_token_rules = {};
             my $rules_name = ref $self->{options}->{rules};
@@ -153,13 +153,13 @@ sub parse{
                 }
                 $bnf .= "\n";
                 # add $bnf to $self->{options}->{$rules} and rebuild the grammar
-                $grammar->merge_token_rules($bnf);
+                $self->{g}->merge_token_rules($bnf);
             }
         } ## ($self->{ambiguity} eq 'tokens'
     } ## if (ref $input eq "ARRAY"){
     # strings are split
     else{
-        my $l = MarpaX::Parse::Lexer->new($grammar);
+        my $l = MarpaX::Parse::Lexer->new($Marpa_grammar);
         $tokens = $l->lex($input);
     }
     

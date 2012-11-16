@@ -133,8 +133,6 @@ sub new
     
     my $options = shift;
     
-    my $bnf_text = $options->{rules};
-    
     #
     # TODO: build $bnf_rules only once (package variable $bnf_parser)
     # ditto for EBNF
@@ -143,7 +141,12 @@ sub new
         rules          => $bnf_rules,
         default_action => 'MarpaX::Parse::Tree::AoA',
     });
+
+# begin _make_rules(text)
         
+    # save original rules for possible merging
+    my $bnf_text = $options->{rules};
+
     # parse bnf
     my $bnf_tokens = MarpaX::Parse::Lexer::BNF->new->lex($bnf_text);
     
@@ -164,10 +167,41 @@ sub new
         default_action => $self->{default_action}, 
         closures => $self->{closures},
     })->parse($bnf_tokens);
-    
+
+# end _make_rules    
+
     $self->build($options);
     
+    # restore rules for possible merging
+    $self->{options}->{rules} = $bnf_text;
+    
     bless $self, $class;
+}
+
+sub merge_token_rules { 
+    
+    my $self = shift;
+
+    my $token_rules = shift;
+
+    say "merging $token_rules";
+
+    # get initial options
+    my $options = $self->{options};
+
+    say ref $self;
+    say ref $token_rules;
+    say ref $options->{rules};
+    
+    # $token_rules and $options->{rules} need to be both texts
+    if (ref $token_rules eq "" and ref $options->{rules} eq ""){
+        # merge texts
+        say "merging $token_rules with $options->{rules}";
+        $options->{rules} .= $token_rules;
+    }
+    
+    # rebuild
+    $self->build($options);
 }
 
 # parse BNF to what will become Marpa::R2 rules after transformation 

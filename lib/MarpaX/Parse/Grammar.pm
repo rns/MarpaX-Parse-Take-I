@@ -140,20 +140,18 @@ sub merge_token_rules {
 
     my $token_rules = shift;
 
+#    say "merging $token_rules";
+
     # get initial options
     my $options = $self->{options};
-    
-    # $token_rules and $options->{rules} need to be both array refs or scalars (strings)
+
+    # $token_rules and $options->{rules} need to be both array refs
     if (ref $token_rules eq "ARRAY" and ref $options->{rules} eq "ARRAY"){
         # merge arrays
         push @{ $options->{rules} }, @$token_rules;
         
     }
-    elsif (ref $token_rules eq "" and ref $options->{rules} eq ""){
-        # merge texts
-        $options->{rules} .= $token_rules;
-    }
-    
+
     # rebuild
     $self->build($options);
 }
