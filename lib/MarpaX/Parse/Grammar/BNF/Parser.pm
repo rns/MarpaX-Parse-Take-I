@@ -128,17 +128,22 @@ my $options = {
     show_bnf_closures => undef, 
 };
 
+my $singleton = undef;
+
 sub new {
 
     my $class = shift;
     
-    # ini grammar for bnf rules parsing 
-    my $self = $class->SUPER::new({ 
-        rules          => $bnf_rules,
-        default_action => 'MarpaX::Parse::Tree::AoA',
-    });
-
-    bless $self, $class;
+    if (not defined $singleton){
+        # init grammar for bnf rules parsing 
+        $singleton = $class->SUPER::new({ 
+            rules          => $bnf_rules,
+            default_action => 'MarpaX::Parse::Tree::AoA',
+        });
+        bless $singleton, $class;
+    }
+    
+    $singleton;
 }
 
 sub parse{

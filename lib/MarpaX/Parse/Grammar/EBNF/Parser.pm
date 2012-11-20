@@ -218,18 +218,23 @@ my $ebnf_rules = [
 
 ];
 
+my $singleton = undef;
+
 sub new {
 
     my $class = shift;
     
-    my $self = $class->SUPER::new({ 
-        rules => clone($ebnf_rules),
-        default_action => 'MarpaX::Parse::Tree::AoA',
-        quantifier_rules => 'recursive',
-        nullables_for_quantifiers => 1,
-    });
-    
-    bless $self, $class;
+    if (not defined $singleton){
+        $singleton = $class->SUPER::new({ 
+            rules => clone($ebnf_rules),
+            default_action => 'MarpaX::Parse::Tree::AoA',
+            quantifier_rules => 'recursive',
+            nullables_for_quantifiers => 1,
+        });
+        bless $singleton, $class;
+    }    
+
+    $singleton;
 }
 
 sub parse{
@@ -279,7 +284,6 @@ sub parse{
             $NoA_indices{$NoA} = $i;
         }
         # among those with equal number of actions, select an arbitrary one
-        # TODO: ensure grammar amniguity
         $rules = $rules->[ $NoA_indices{(sort { $b <=> $a } keys %NoA_indices)[0]} ];
     }
     
