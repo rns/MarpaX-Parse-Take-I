@@ -129,10 +129,8 @@ sub traverse_HoA{
 
     my $tree = shift;
     
-    say Dump $tree;
-    
     my (@int, @frac, $neg);
-=pod
+
     # positive integer or float
     if (ref $tree->{expr} eq "HASH"){
         # positive integer
@@ -158,7 +156,7 @@ sub traverse_HoA{
         @frac = ();
         $neg  = 1;
     }
-=cut
+
     return [ \@int, \@frac, $neg ]
 }
 
@@ -170,11 +168,11 @@ sub traverse_HoH{
     my $tree = shift;
     
     my (@int, @frac, $neg);
-=pod    
+
     @int = @{ $tree->{expr}->{num}->{integer}->{'digit+'}->{digit} };
     @frac = exists $tree->{expr}->{num}->{fractional} ? @{ $tree->{expr}->{num}->{fractional}->{'digit+'}->{digit} } : ();
     $neg = $tree->{expr}->{minus};
-=cut
+
     return [ \@int, \@frac, $neg ]
 }
 
