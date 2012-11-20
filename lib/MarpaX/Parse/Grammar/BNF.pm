@@ -19,7 +19,7 @@ sub new
     
     my $options = shift;
     
-    say Dump $options;
+#    say Dump $options;
 
     # get bnf text
     my $bnf_text = $options->{rules};
@@ -28,7 +28,9 @@ sub new
     my $bnf_parser = MarpaX::Parse::Grammar::BNF::Parser->new;
     $options->{rules} = $bnf_parser->parse($bnf_text);
 
-    say Dump $options;
+#    say Dump $options;
+
+    # TODO: save $bnf_text rules and $options->{rules} for merging
     
     # build Marpa::R2 grammar
     my $self = $class->SUPER::new( $options );

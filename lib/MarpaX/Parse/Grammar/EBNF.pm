@@ -23,12 +23,14 @@ sub new {
 
     # get ebnf text
     my $ebnf_text = $options->{rules};
-    
+
     # parse bnf (generate closures as { action => closure } in rule hashref
     my $ebnf_parser = MarpaX::Parse::Grammar::EBNF::Parser->new;
     $options->{rules} = $ebnf_parser->parse($ebnf_text);
 
-    say Dump $options;
+#    say Dump $options;
+
+    # TODO: save $ebnf_text rules and $options->{rules} for merging
     
     # build Marpa::R2 grammar
     my $self = $class->SUPER::new( $options );
