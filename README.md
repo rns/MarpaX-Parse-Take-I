@@ -1,5 +1,7 @@
-MarpaX-Parse
-=============
+MarpaX-Parse, MarpaX::Tool-to-be
+=================================
+
+Parts of this module will be refactored out into individual modules and probably distros as MarpaX::Tool::*, if [they](http://blogs.perl.org/users/rns/2012/11/a-lexer-for-marpar2.html) prove to be [useful](http://blogs.perl.org/users/rns/2012/11/a-parser-for-marpar2.html) enough.
 
 What It Is
 ----------
@@ -57,7 +59,7 @@ Feature => Test(s)
 
 -	[`13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t`](https://github.com/rns/MarpaX-Parse/blob/master/t/13_decimal_number_power_expansion_bnf_parse_trees_vs_actions.t).
 
-**Parsing ‘time flies like an arrow, bit fruit flies like a banana’ sentence getting part of speech data from WordNet::QueryData (if installed) or pre-set hash ref (otherwise)**
+**Parsing 'time flies like an arrow, bit fruit flies like a banana' sentence getting part of speech data from WordNet::QueryData (if installed) or pre-set hash ref (otherwise)**
 
 -	[`15_timeflies_input_model_vs_ambiguous_tokens.t`](https://github.com/rns/MarpaX-Parse/blob/master/t/15_timeflies_input_model_vs_ambiguous_tokens.t)
 
