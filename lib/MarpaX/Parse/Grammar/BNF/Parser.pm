@@ -9,7 +9,9 @@ use YAML;
 use Eval::Closure;
 use Clone qw{clone};
 
-our @ISA = qw(MarpaX::Parse::Grammar);
+#our @ISA = qw(MarpaX::Parse::Grammar);
+
+use parent 'MarpaX::Parse::Grammar';
 
 use MarpaX::Parse::Parser;
 use MarpaX::Parse::Lexer::BNF;

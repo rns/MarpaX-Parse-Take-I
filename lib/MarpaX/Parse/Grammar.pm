@@ -148,7 +148,7 @@ sub merge_token_rules {
     my $options = $self->{options};
 
     # $token_rules and $options->{rules} need to be both array refs
-    if (ref $token_rules eq "ARRAY" and ref $options->{rules} eq "ARRAY"){
+    if (ref $token_rules eq "ARRAY"){
         # merge arrays
         push @{ $options->{rules} }, @$token_rules;
         

@@ -11,7 +11,7 @@ use Clone qw {clone};
 
 use MarpaX::Parse::Grammar::EBNF::Parser;
 
-our @ISA = qw(MarpaX::Parse::Grammar);
+use parent 'MarpaX::Parse::Grammar';
 
 sub new {
 

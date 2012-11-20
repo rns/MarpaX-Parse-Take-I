@@ -10,7 +10,9 @@ use Clone qw{clone};
 
 use MarpaX::Parse::Grammar::BNF::Parser;
 
-our @ISA = qw(MarpaX::Parse::Grammar);
+use parent 'MarpaX::Parse::Grammar';
+
+my $bnf_parser = MarpaX::Parse::Grammar::BNF::Parser->new;
 
 # construction
 sub new
@@ -25,7 +27,6 @@ sub new
     my $bnf_text = $options->{rules};
     
     # parse bnf (generate closures as { action => closure } in rule hashref
-    my $bnf_parser = MarpaX::Parse::Grammar::BNF::Parser->new;
     $options->{rules} = $bnf_parser->parse($bnf_text);
 
 #    say Dump $options;
@@ -44,24 +45,26 @@ sub merge_token_rules {
 
     my $token_rules = shift;
 
-    say "merging $token_rules";
+#    say "# BNF: merging $token_rules";
 
     # get initial options
     my $options = $self->{options};
 
-    say ref $self;
-    say ref $token_rules;
-    say ref $options->{rules};
+#    say ref $self;
+#    say ref $token_rules;
+#    say ref $options->{rules};
+#    say Dump $options->{rules};
     
-    # $token_rules and $options->{rules} need to be both texts
-    if (ref $token_rules eq "" and ref $options->{rules} eq ""){
-        # merge texts
-        say "merging $token_rules with $options->{rules}";
-        $options->{rules} .= $token_rules;
+    if (ref $token_rules eq ""){
+        push @{ $options->{rules} }, @{ $bnf_parser->parse($token_rules) };
     }
+    
+#    say "# added token rules:\n", Dump $options->{rules};
     
     # rebuild
     $self->build($options);
+    
+#    say "# rebuilt:\n", $self->grammar->show_rules;
 }
 
 sub rules { $_[0]->{rules} }

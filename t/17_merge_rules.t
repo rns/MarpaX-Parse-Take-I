@@ -44,4 +44,6 @@ $mt->grammar->merge_token_rules($terminals);
 
 is $mt->parse($number), '(expr (minus -) (num (digits (digit 1) (digits (digit 2) (digits (digit 3) (digits (digit 4))))) (point .) (digits (digit 4) (digits (digit 2) (digits (digit 3))))))', "$number can be parsed with terminals added";
 
+# TODO: add test for ebnf
+
 done_testing;

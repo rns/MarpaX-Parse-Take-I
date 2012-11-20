@@ -131,7 +131,7 @@ sub new{
     # set up parser
     # we set the grammar we have whence MarpaX::Tool::Parser will get
     # Marpa::R2::Grammar it needs for the recognizer
-    $recognizer_options->{grammar}        = $grammar;
+    $recognizer_options->{grammar}        = $self->{g};
     # TODO: set default_action to grammar and get it in MarpaX::Tool::Parser
     #       this needs an accessor for default_action in Marpa::R2::Grammar
     # MarpaX::Tool::Parser needs to know default_action for parse tree dumping

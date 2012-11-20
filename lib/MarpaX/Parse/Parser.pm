@@ -23,6 +23,8 @@ sub new{
     # extract the grammar and the default action for it
     $self->{g}  = $options->{grammar} or die 'grammar required';
     
+    # TODO
+    
     # extract other options of this module
     # TODO: die on improper option values
     for my $o (qw{
@@ -91,20 +93,9 @@ sub parse{
 
     # TODO (MarpaX::Tool::NLP::Parser): get %$features, split $input, set up $tokens
     
-    # set recognizer options we received and got
-    my $recce_opts = $self->{ro};
-    
     # get Marpa::R2::Grammar
-    my $Marpa_grammar  = ref $self->{g} eq "Marpa::R2::Grammar" ? $self->{g} : $self->{g}->grammar;
+    my $Marpa_grammar  = $self->{g}->isa("Marpa::R2::Grammar") ? $self->{g} : $self->{g}->grammar;
 
-    # closures for the recognizer need to be pre-set in options
-    
-    # set grammar
-    $recce_opts->{grammar}  = $Marpa_grammar;
-
-    # init recognition failures
-    $self->{recognition_failures} = [];
-    
     # input can be name/value pair arrayref or a string
     # name/value pair arrayrefs are used as is
     my $tokens;
@@ -112,9 +103,13 @@ sub parse{
         $tokens = $input;
         # TODO: grammar data can be shown here for tracing
         # find ambiguous tokens and disambiguate them by adding rules to the grammar
+#        say "# tokens are array: ", ref $self->{g};
+#        say ref $self->{g};
+#        say $self->{g}->isa('MarpaX::Parse::Grammar');
         if ($self->{ambiguity} eq 'tokens' and $self->{g}->isa('MarpaX::Parse::Grammar')){
             # rules for the ambiguous token must be unique
             my $ambiguous_token_rules = {};
+            # TODO this needs to check rules passed to $self->{g} as argument
             my $rules_name = ref $self->{options}->{rules};
             # enumerate tokens
             for my $i (0..@$tokens-1){
@@ -140,10 +135,10 @@ sub parse{
             if ($rules_name eq "ARRAY"){
                 # lhs => [qw{rhs}]
                 my @rules = map { [ $_ => [ $ambiguous_token_rules->{$_} ] ] } keys %$ambiguous_token_rules;
-                $self->{grammar}->merge_token_rules(\@rules);
+                $self->{g}->merge_token_rules(\@rules);
             }
             else{
-                # make a BNF grammar of @ambiguous_token_rules
+                # make a BNF grammar text of @ambiguous_token_rules
                 my $bnf = "\n# rules added from ambiguous tokens\n";
                 # lhs ::= rhs
                 for my $lhs (keys %$ambiguous_token_rules){
@@ -155,6 +150,9 @@ sub parse{
                 # add $bnf to $self->{options}->{$rules} and rebuild the grammar
                 $self->{g}->merge_token_rules($bnf);
             }
+            # update recognizer's grammar
+#            say "# updating Marpa grammar:\n", $self->{g}->grammar->show_rules;
+            $Marpa_grammar = $self->{g}->grammar;
         } ## ($self->{ambiguity} eq 'tokens'
     } ## if (ref $input eq "ARRAY"){
     # strings are split
@@ -165,6 +163,18 @@ sub parse{
     
     # TODO: option is needed to show tokens here
     
+    # set recognizer options we received and got
+    my $recce_opts = $self->{ro};
+    
+    # closures for the recognizer need to be pre-set in options
+    
+    # set grammar
+    $recce_opts->{grammar}  = $Marpa_grammar;
+#    say "# merged:\n", $Marpa_grammar->show_rules;
+    
+    # init recognition failures
+    $self->{recognition_failures} = [];
+
     # setup recognizer
     my $recognizer = Marpa::R2::Recognizer->new( $recce_opts ) 
        or die 'Failed to create recognizer';
@@ -197,7 +207,7 @@ sub parse{
     my @values;
     my %values; # only unique parses will be returned
     my $value_count = 1;
-    my $max_value_count = 10000; # TODO: max_value_count needs to be an option
+    my $max_value_count = 10000; # TODO: max_value_count needs to be an max_values max_parses option
     while ( defined( my $value_ref = $recognizer->value() ) ) {
         my $value = $value_ref ? ${$value_ref} : 'No parse';
                 

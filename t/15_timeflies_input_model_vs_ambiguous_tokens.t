@@ -150,10 +150,10 @@ my $expected_IM = <<EOT;
 EOT
 
 my $expected_AT = <<EOT;
-(S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
-(S (C (NP (adjective time) (noun flies)) (VP (V like) (O (NP (article an) (noun arrow))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
-(S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (adjective fruit) (noun flies)) (VP (V like) (O (NP (article a) (noun banana))))))
-(S (C (NP (noun time)) (VP (V flies) (A (PP (preposition like) (NP (article an) (noun arrow)))))) (comma ,) (conjunction but) (C (NP (noun fruit)) (VP (V flies) (A (PP (preposition like) (NP (article a) (noun banana)))))))
+(S (C (NP (adjective (a time)) (noun (n flies))) (VP (V (v like)) (O (NP (article an) (noun (n arrow)))))) (comma ,) (conjunction but) (C (NP (adjective (a fruit)) (noun (n flies))) (VP (V (v like)) (O (NP (article a) (noun (n banana)))))))
+(S (C (NP (adjective (a time)) (noun (n flies))) (VP (V (v like)) (O (NP (article an) (noun (n arrow)))))) (comma ,) (conjunction but) (C (NP (noun (n fruit))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article a) (noun (n banana))))))))
+(S (C (NP (noun (n time))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article an) (noun (n arrow))))))) (comma ,) (conjunction but) (C (NP (adjective (a fruit)) (noun (n flies))) (VP (V (v like)) (O (NP (article a) (noun (n banana)))))))
+(S (C (NP (noun (n time))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article an) (noun (n arrow))))))) (comma ,) (conjunction but) (C (NP (noun (n fruit))) (VP (V (v flies)) (A (PP (preposition (p like)) (NP (article a) (noun (n banana))))))))
 EOT
 
 use MarpaX::Parse::Tree;
