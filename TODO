@@ -1,0 +1,50 @@
+= merge rules 
+	- textual 
+		- MarpaX::Parse::Grammar::EBNF 
+		-	MarpaX::Parse::Grammar::BNF
+	- array
+		- MarpaX::Parse::Grammar
+
+= named subrules in EBNF
+
+= more tests for MarpaX::Parse::Lexer
+
+= decouple MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression) 
+	and load them on demand in MarpaX::Tool::Parse::Tree
+	- MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression)::build
+		too be used as default_action
+	- MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression)::dump
+	
+= decouple MarpaX::Parse::Lexer to MarpaX::Tool::Lexer
+
+= subclassing MarpaX::Parse::Lexer	
+	- default lexer is naive, use Parse::Lex instead of it
+	- MarpaX::Parse::Lexer::Lex 
+
+= decouple MarpaX::Tool::Parse::Tree
+	- decouple MarpaX::Tool::Parse::Tree::Simple
+	- decouple MarpaX::Tool::Parse::Tree::XML
+
+= subclassing MarpaX::Parse::Tree
+	- MarpaX::Parse::Tree::MyTree
+	- MarpaX::Parse::Tree::MyTree::build
+		+ this should work as default_action for Marpa::R2::Grammar
+	- MarpaX::Parse::Tree::MyTree::dump($format)
+		+ this should present the tree in text, html, dhtml, etc.
+
+= decouple MarpaX::Parse::Parser MarpaX::Tool::Parser
+	
+= decouple MarpaX::Parse::Grammar to MarpaX::Tool::Grammar
+
+= decouple MarpaX::Parse::Grammar::BNF to MarpaX::Tool::Grammar::BNF
+
+= decouple MarpaX::Parse::Grammar::EBNF to MarpaX::Tool::Grammar::EBNF
+	
+= MarpaX::Tool(s) design goals: 
+	- short version
+		+ Just Work(tm) Together? (with Marpa::R2::(Grammar|Recognizer))? (with others)?
+	- long version:
+		+ Just Work(tm) with Marpa::R2::Grammar and/or Marpa::R2::Recognizer
+		+ Just Work(tm) together
+		+ Just Work(tm) together with Marpa::R2::Grammar and/or Marpa::R2::Recognizer
+	
