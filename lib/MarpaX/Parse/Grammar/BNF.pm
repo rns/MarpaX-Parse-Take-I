@@ -6,13 +6,9 @@ use warnings;
 
 use YAML;
 
-use Clone qw{clone};
-
 use MarpaX::Parse::Grammar::BNF::Parser;
 
 use parent 'MarpaX::Parse::Grammar';
-
-my $bnf_parser = MarpaX::Parse::Grammar::BNF::Parser->new;
 
 # construction
 sub new
@@ -27,6 +23,7 @@ sub new
     my $bnf_text = $options->{rules};
     
     # parse bnf (generate closures as { action => closure } in rule hashref
+    my $bnf_parser = MarpaX::Parse::Grammar::BNF::Parser->new;
     $options->{rules} = $bnf_parser->parse($bnf_text);
 
 #    say Dump $options;
@@ -56,7 +53,7 @@ sub merge_token_rules {
 #    say Dump $options->{rules};
     
     if (ref $token_rules eq ""){
-        push @{ $options->{rules} }, @{ $bnf_parser->parse($token_rules) };
+        push @{ $options->{rules} }, @{ MarpaX::Parse::Grammar::BNF::Parser->new->parse($token_rules) };
     }
     
 #    say "# added token rules:\n", Dump $options->{rules};

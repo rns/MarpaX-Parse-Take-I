@@ -7,7 +7,6 @@ use warnings;
 use YAML;
 
 use Eval::Closure;
-use Clone qw{clone};
 
 #our @ISA = qw(MarpaX::Parse::Grammar);
 

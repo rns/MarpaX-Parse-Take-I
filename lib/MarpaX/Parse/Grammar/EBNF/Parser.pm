@@ -7,7 +7,6 @@ use warnings;
 use YAML;
 
 use Eval::Closure;
-use Clone qw {clone};
 
 use MarpaX::Parse::Parser;
 use MarpaX::Parse::Lexer::BNF;
@@ -226,7 +225,7 @@ sub new {
     
     if (not defined $singleton){
         $singleton = $class->SUPER::new({ 
-            rules => clone($ebnf_rules),
+            rules => $ebnf_rules,
             default_action => 'MarpaX::Parse::Tree::AoA',
             quantifier_rules => 'recursive',
             nullables_for_quantifiers => 1,
