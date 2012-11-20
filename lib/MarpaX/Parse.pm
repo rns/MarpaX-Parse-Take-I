@@ -102,6 +102,9 @@ sub new{
         # now try EBNF
         if ($@){
             my $bnf_parsing_errors = $@;
+
+#            say $bnf_parsing_errors;
+           
             # TODO: catch EBNF parsing errors, e.g. := not ::=
             eval {
                 $grammar = MarpaX::Parse::Grammar::EBNF->new(clone $grammar_options);
@@ -122,6 +125,8 @@ sub new{
     
     # save grammar
     $self->{g} = $grammar;
+    
+#    say Dump $grammar;
     
     # set up parser
     # we set the grammar we have whence MarpaX::Tool::Parser will get

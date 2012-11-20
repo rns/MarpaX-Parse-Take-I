@@ -73,6 +73,8 @@ sub build {
     
     my $options = shift;
 
+#    say __PACKAGE__ . "::build";
+
     # clone options to enable adding rules to grammar
     $self->{options} = clone $options;
     
