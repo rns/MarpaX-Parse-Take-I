@@ -126,8 +126,8 @@ my $options = {
     show_bnf_closures => undef, 
 };
 
-sub new
-{
+sub new {
+
     my $class = shift;
     
     # ini grammar for bnf rules parsing 

@@ -1,4 +1,4 @@
-package MarpaX::Parse::Grammar::EBNF;
+package MarpaX::Parse::Grammar::EBNF::Parser;
 
 use 5.010;
 use strict;
@@ -8,6 +8,9 @@ use YAML;
 
 use Eval::Closure;
 use Clone qw {clone};
+
+use MarpaX::Parse::Parser;
+use MarpaX::Parse::Lexer::BNF;
 
 our @ISA = qw(MarpaX::Parse::Grammar);
 
@@ -215,13 +218,9 @@ my $ebnf_rules = [
 
 ];
 
-sub new
-{
+sub new {
+
     my $class = shift;
-    
-    my $options = shift;
-    
-    my $ebnf_text = $options->{rules};
     
     my $self = $class->SUPER::new({ 
         rules => clone($ebnf_rules),
@@ -229,7 +228,16 @@ sub new
         quantifier_rules => 'recursive',
         nullables_for_quantifiers => 1,
     });
-        
+    
+    bless $self, $class;
+}
+
+sub parse{
+
+    my $self = shift;
+    
+    my $ebnf_text = shift;
+
     # tokenize ebnf text
     my $l = MarpaX::Parse::Lexer::BNF->new;
     
@@ -257,7 +265,7 @@ sub new
     # parse EBNF tokens to Marpa::R2 rules
     my $rules = MarpaX::Parse::Parser->new({ 
         grammar => $self->grammar, 
-        default_action => $self->{default_action} ,
+        default_action => $self->{default_action},
         closures => $self->{closures},
     })->parse($ebnf_tokens);
     
@@ -275,14 +283,7 @@ sub new
         $rules = $rules->[ $NoA_indices{(sort { $b <=> $a } keys %NoA_indices)[0]} ];
     }
     
-    $options->{rules} = $rules;
-    
-    $self->build($options);
-    
-    bless $self, $class;
-}
-
-sub parse{
+    return $rules;
 
 }
 

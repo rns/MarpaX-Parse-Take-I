@@ -8,11 +8,9 @@ use YAML;
 
 use Clone qw{clone};
 
-our @ISA = qw(MarpaX::Parse::Grammar);
-
-use MarpaX::Parse::Parser;
 use MarpaX::Parse::Grammar::BNF::Parser;
-use MarpaX::Parse::Lexer::BNF;
+
+our @ISA = qw(MarpaX::Parse::Grammar);
 
 # construction
 sub new
@@ -64,8 +62,6 @@ sub merge_token_rules {
     $self->build($options);
 }
 
-# parse BNF to what will become Marpa::R2 rules after transformation 
-# (extraction of closures, adding rules for quantifiers, extraction of lexer rules, etc.)
 sub rules { $_[0]->{rules} }
 
 1;
