@@ -1,3 +1,4 @@
+
 = merge rules 
 	- textual 
 		- MarpaX::Parse::Grammar::EBNF 
@@ -7,29 +8,69 @@
 
 = named subrules in EBNF
 
+= diagnostic show_*
+
+= recognition failures show_recognition_failure)s)
+
 = more tests for MarpaX::Parse::Lexer
 
-= decouple MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression) 
-	and load them on demand in MarpaX::Tool::Parse::Tree
-	- MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression)::build
-		too be used as default_action
-	- MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression)::dump
-	
 = decouple MarpaX::Parse::Lexer to MarpaX::Tool::Lexer
 
 = subclassing MarpaX::Parse::Lexer	
 	- default lexer is naive, use Parse::Lex instead of it
 	- MarpaX::Parse::Lexer::Lex 
 
+= decouple MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression) 
+	and load them on demand in MarpaX::Tool::Parse::Tree
+	- MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression)::build
+		too be used as default_action
+	- MarpaX::Parse::Tree::(AoA HoA HoH XML Simple SExpression)::dump
+
 = decouple MarpaX::Tool::Parse::Tree
 	- decouple MarpaX::Tool::Parse::Tree::Simple
 	- decouple MarpaX::Tool::Parse::Tree::XML
+
+= start MarpaX::Tool::NLP
+	- robust natural language parser
+		- fail nicely
+		- non-words
+		- unknown words
+		...
+	- MarpaX::Tool::NLP::Lexer %features-based
+
+= ranking 'time files ...' to prefer, e.g. prep phrases over noun phrases
+	- based on WordNet sense frequency data
+	- like is more vern than
+
+= use xslt to transform on xml parse tree 
+
+= Tree::Simple::Transform::Factory 
+	+ xslt for everything that has something xpath-like 
+		- JSON jsonpath
+		- Tree::Simple
+		- complex data structures
+	= input
+		- sub{} to find target node(s) 
+		- sub{} to form new node(s) 
+	= output
+		- replace target node(s) with new node(s)
+		- name and save the transform to factory
+		- reuse the transform: get from the factory; apply to tree
+
+= change action tags from %{ %} to {} 
+	%{ %} -> { } + lookahead to }(?>\||\n)
+
+=	define identifier for BNF parsing
+    [\w_-\.]
+
+= use MarpaX::Parse::Lexer to parse (E)BNF
 
 = subclassing MarpaX::Parse::Tree
 	- MarpaX::Parse::Tree::MyTree
 	- MarpaX::Parse::Tree::MyTree::build
 		+ this should work as default_action for Marpa::R2::Grammar
 	- MarpaX::Parse::Tree::MyTree::dump($format)
+		+ load dumper module
 		+ this should present the tree in text, html, dhtml, etc.
 
 = decouple MarpaX::Parse::Parser MarpaX::Tool::Parser
@@ -40,11 +81,12 @@
 
 = decouple MarpaX::Parse::Grammar::EBNF to MarpaX::Tool::Grammar::EBNF
 	
-= MarpaX::Tool(s) design goals: 
-	- short version
-		+ Just Work(tm) Together? (with Marpa::R2::(Grammar|Recognizer))? (with others)?
-	- long version:
-		+ Just Work(tm) with Marpa::R2::Grammar and/or Marpa::R2::Recognizer
-		+ Just Work(tm) together
-		+ Just Work(tm) together with Marpa::R2::Grammar and/or Marpa::R2::Recognizer
+= meta
+	= MarpaX::Tool(s) design goals: 
+		- short version
+			+ Just Work(tm) Together? (with Marpa::R2::(Grammar|Recognizer))? (with others)?
+		- long version:
+			+ Just Work(tm) with Marpa::R2::Grammar and/or Marpa::R2::Recognizer
+			+ Just Work(tm) together
+			+ Just Work(tm) together with Marpa::R2::Grammar and/or Marpa::R2::Recognizer
 	
