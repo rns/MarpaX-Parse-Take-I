@@ -102,15 +102,13 @@ sub new{
         # now try EBNF
         if ($@){
             my $bnf_parsing_errors = $@;
-
 #            say $bnf_parsing_errors;
-           
-            # TODO: catch EBNF parsing errors, e.g. := not ::=
+           # TODO: catch EBNF parsing errors, e.g. := not ::=
             eval {
                 $grammar = MarpaX::Parse::Grammar::EBNF->new(clone $grammar_options);
             };
             if ($@){
-                # TODO: return parsing errors somehow 
+                # parsing errors are returned as $@
                 my $ebnf_parsing_errors = $@;
                 $@ = "\n# bnf parsing error(s)\n"  .  $bnf_parsing_errors . 
                        "# ebnf parsing error(s)\n" . $ebnf_parsing_errors;
@@ -132,8 +130,7 @@ sub new{
     # we set the grammar we have whence MarpaX::Tool::Parser will get
     # Marpa::R2::Grammar it needs for the recognizer
     $recognizer_options->{grammar}        = $self->{g};
-    # TODO: set default_action to grammar and get it in MarpaX::Tool::Parser
-    #       this needs an accessor for default_action in Marpa::R2::Grammar
+    # TODO: set default_action to grammar and get it in MarpaX::Tool::Parser; this needs an accessor for default_action in Marpa::R2::Grammar
     # MarpaX::Tool::Parser needs to know default_action for parse tree dumping
     $recognizer_options->{default_action} = $grammar_options->{default_action};
     # closures is the argument of Marpa::R2::Recognizer 

@@ -23,8 +23,6 @@ sub new{
     # extract the grammar and the default action for it
     $self->{g}  = $options->{grammar} or die 'grammar required';
     
-    # TODO
-    
     # extract other options of this module
     # TODO: die on improper option values
     for my $o (qw{

@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-# TODO: load modules on demand
+# TODO: make load modules on demand work
 use Module::Runtime qw{ use_module };
 
 use Marpa::R2;
