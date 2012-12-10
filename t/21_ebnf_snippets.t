@@ -64,6 +64,36 @@ EOT
 EOT
 ],
 
+[ q{ 
+conditionalSect ::= includeSect | ignoreSect
+includeSect ::= '<![' S? 'INCLUDE' S? '[' extSubsetDecl ']]>'     #[VC: Proper Conditional Section/PE Nesting]
+ignoreSect ::= '<![' S? 'IGNORE' S? '[' ignoreSectContents* ']]>'    #[VC: Proper Conditional Section/PE Nesting]
+ignoreSectContents ::= Ignore ('<![' ignoreSectContents ']]>' Ignore)*
+Ignore ::= Char* - (Char* ('<![' | ']]>') Char*)
+}, <<EOT
+0: conditionalSect -> includeSect
+1: conditionalSect -> ignoreSect
+2: includeSect -> '<![' S 'INCLUDE' S '[' extSubsetDecl ']]>'
+3: ignoreSect -> '<![' S 'IGNORE' S '[' ignoreSectContents* ']]>'
+4: ignoreSectContents -> Ignore ignoreSectContents__SR.3.0*
+5: ignoreSectContents__SR.3.0 -> '<![' ignoreSectContents ']]>' Ignore
+6: Ignore -> Char* - Ignore__SR.4.1
+7: Ignore__SR.4.0 -> '<!['
+8: Ignore__SR.4.0 -> ']]>'
+9: Ignore__SR.4.1 -> Char* Ignore__SR.4.0 Char*
+10: ignoreSectContents* -> ignoreSectContents
+11: ignoreSectContents* -> ignoreSectContents* ignoreSectContents
+12: ignoreSectContents__SR.3.0* -> ignoreSectContents__SR.3.0
+13: ignoreSectContents__SR.3.0* -> ignoreSectContents__SR.3.0* ignoreSectContents__SR.3.0
+14: Char* -> Char
+15: Char* -> Char* Char
+16: Char* -> /* empty !used */
+17: ignoreSectContents__SR.3.0* -> /* empty !used */
+18: S -> /* empty !used */
+19: ignoreSectContents* -> /* empty !used */
+EOT
+],
+
     ){
     my ($grammar, $rules, $input, $output) = @$data;
     
