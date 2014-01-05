@@ -1,7 +1,7 @@
 Beware!
 =======
 
-All the important features of this project (and many useful others) are now supported by [`Marpa::R2`'s Scanless interface (SLIF)](https://metacpan.org/pod/Marpa::R2). 
+All the important features of this project (and many useful others) are now supported by [`Marpa::R2`'s Scanless interface (SLIF)](https://metacpan.org/pod/Marpa::R2). The rationale and todos are completely outdated/irrelevant; the code, however, would well work still due to `Marpa::R2`'s excellent backward compatibility.
 
 So this repo is left here for purely illustrative/archive purposes. What exactly it illustrates is up to the reader. :)
 
