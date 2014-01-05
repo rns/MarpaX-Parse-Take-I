@@ -1,3 +1,7 @@
+All the important features of this project (and many useful others) are now supported by [`Marpa::R2`'s Scanless interface (SLIF)](https://metacpan.org/pod/Marpa::R2). 
+
+So this repo is left here for purely illustrative/archive purposes. What exactly it illustrates is up to the reader. :)
+
 MarpaX-Parse, MarpaX::Tool-to-be
 =================================
 
